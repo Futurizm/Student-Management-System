@@ -27,7 +27,7 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
 
         <div className="max-h-[80vh] overflow-auto">
           <div className="p-6 space-y-6">
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="flex flex-col gap-4">
               <Card className="md:col-span-1">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center space-y-4">

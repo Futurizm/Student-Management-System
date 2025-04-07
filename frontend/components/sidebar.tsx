@@ -22,10 +22,10 @@ import {
 interface SidebarProps {
   open: boolean
   setOpen: (open: boolean) => void
-  userRole: "admin" | "teacher" | "inspector" | null
+  userRole: "ADMIN" | "TEACHER" | "INSPECTOR" | null
 }
 
-export function Sidebar({ open, setOpen, userRole = "admin" }: SidebarProps) {
+export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
   const pathname = usePathname()
 
   // Маршруты для администратора
@@ -40,6 +40,11 @@ export function Sidebar({ open, setOpen, userRole = "admin" }: SidebarProps) {
       icon: GraduationCap,
       href: "/dashboard/students",
     },
+    {
+      label: "Группы",
+      icon: Users,
+      href: "/dashboard/groups",
+    },  
     {
       label: "Добавить студента",
       icon: UserPlus,
@@ -116,7 +121,7 @@ export function Sidebar({ open, setOpen, userRole = "admin" }: SidebarProps) {
   ]
 
   // Выбираем маршруты в зависимости от роли
-  const routes = userRole === "admin" ? adminRoutes : userRole === "teacher" ? teacherRoutes : inspectorRoutes
+  const routes = userRole === "ADMIN" ? adminRoutes : userRole === "TEACHER" ? teacherRoutes : inspectorRoutes
 
   return (
     <>
@@ -166,12 +171,12 @@ export function Sidebar({ open, setOpen, userRole = "admin" }: SidebarProps) {
           <div className="flex items-center gap-3 rounded-md bg-blue-50 px-3 py-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-200">
               <span className="text-sm font-medium text-blue-700">
-                {userRole === "admin" ? "А" : userRole === "teacher" ? "П" : "И"}
+                {userRole === "ADMIN" ? "А" : userRole === "TEACHER" ? "П" : "И"}
               </span>
             </div>
             <div>
               <p className="text-sm font-medium">
-                {userRole === "admin" ? "Администратор" : userRole === "teacher" ? "Преподаватель" : "Проверяющий"}
+                {userRole === "ADMIN" ? "Администратор" : userRole === "TEACHER" ? "Преподаватель" : "Проверяющий"}
               </p>
               <p className="text-xs text-gray-500">Роль в системе</p>
             </div>

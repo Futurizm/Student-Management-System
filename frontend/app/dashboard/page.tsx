@@ -9,11 +9,11 @@ export default function DashboardRedirect() {
   const { userRole } = useAuth()
 
   useEffect(() => {
-    if (userRole === "admin") {
+    if (userRole === "ADMIN") {
       router.push("/dashboard/admin")
-    } else if (userRole === "teacher") {
+    } else if (userRole === "TEACHER") {
       router.push("/dashboard/teacher")
-    } else if (userRole === "inspector") {
+    } else if (userRole === "INSPECTOR") {
       router.push("/dashboard/inspector")
     } else {
       router.push("/")

@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { UserRole } from "@/lib/types"
 
 interface MainNavProps {
   pathname: string
-  userRole: "admin" | "teacher" | "inspector" | null
+  userRole: UserRole
 }
 
 export function MainNav({ pathname, userRole }: MainNavProps) {
@@ -72,7 +73,7 @@ export function MainNav({ pathname, userRole }: MainNavProps) {
   ]
 
   // Выбираем маршруты в зависимости от роли
-  const routes = userRole === "admin" ? adminRoutes : userRole === "teacher" ? teacherRoutes : inspectorRoutes
+  const routes = userRole === "ADMIN" ? adminRoutes : userRole === "TEACHER" ? teacherRoutes : inspectorRoutes
 
   return (
     <nav className="hidden md:flex items-center gap-6">

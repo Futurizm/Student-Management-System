@@ -225,7 +225,7 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
           </div>
         </DialogHeader>
 
-        <div className="max-h-[80vh] overflow-auto">
+        <div className="max-h-[60vh] overflow-auto">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-4">
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

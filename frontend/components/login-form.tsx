@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LockIcon, MailIcon } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
+import { HOST } from "@/lib/constants"
 
 // Предопределенные учетные записи
 const USERS = {
@@ -25,38 +26,52 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
 
     // Проверка учетных данных
-    setTimeout(() => {
-      const user = USERS[email as keyof typeof USERS]
+    try {
+      const response = await fetch(`${HOST}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
 
-      if (user && user.password === password) {
-        // Сохраняем роль пользователя в localStorage для использования в приложении
-        localStorage.setItem("userRole", user.role)
-        localStorage.setItem("userEmail", email)
+      const data = await response.json()
 
-        // Перенаправление на соответствующую страницу в зависимости от роли
-        if (user.role === "admin") {
-          router.push("/dashboard/admin")
-        } else if (user.role === "teacher") {
-          router.push("/dashboard/teacher")
-        } else if (user.role === "inspector") {
-          router.push("/dashboard/inspector")
-        }
-
-        toast({
-          title: "Вход выполнен успешно",
-          description: `Добро пожаловать, ${user.role}!`,
-        })
-      } else {
-        setError("Неверный email или пароль")
-        setIsLoading(false)
+      if (!response) {
+        throw new Error(data.message || "Ошибка входа")
       }
-    }, 1000)
+
+      localStorage.setItem("token", data.token)
+
+      const tokenPayload = JSON.parse(atob(data.token.split(".")[1]))
+      const userRole = tokenPayload.role as keyof typeof routes
+
+      localStorage.setItem("userRole", userRole)
+      localStorage.setItem("userEmail", email)
+
+      const routes = {
+        ADMIN: "/dashboard/admin",
+        TEACHER: "/dashboard/teacher",
+        INSPECTOR: "/dashboard/inspector",
+      }
+
+      router.push(routes[userRole])
+
+      toast({
+        title: "Вход выполнен успешно",
+        description: `Добро пожаловать, ${userRole.toLowerCase()}!`,
+      })
+
+    } catch (error: unknown) {
+      setError("Неверный email или пароль")
+      setIsLoading(false)
+    }
   }
 
   return (
