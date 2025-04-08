@@ -6,9 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Edit, FileDown, Mail, Phone } from "lucide-react"
+import { Student } from "./student-table"
+import { HOST_NO_API } from "@/lib/constants"
 
 interface ViewStudentModalProps {
-  student: any
+  student: Student
   isOpen: boolean
   onClose: () => void
   onEdit: () => void
@@ -22,7 +24,7 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
       <DialogContent className="sm:max-w-[900px] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>Профиль студента</DialogTitle>
-          <DialogDescription>Просмотр информации о студенте {student.name}</DialogDescription>
+          <DialogDescription>Просмотр информации о студенте {student.firstName}</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[80vh] overflow-auto">
@@ -32,22 +34,22 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center space-y-4">
                     <Avatar className="h-32 w-32">
-                      <AvatarImage src={student.imageUrl} alt={student.name} />
-                      <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={`${HOST_NO_API}/${student.profilePicture}`} alt={student.firstName} />
+                      <AvatarFallback>{student.firstName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-center">
-                      <h2 className="text-2xl font-bold">{student.name}</h2>
-                      <p className="text-muted-foreground">{student.studentId}</p>
+                      <h2 className="text-2xl font-bold">{student.firstName}</h2>
+                      <p className="text-muted-foreground">{student.iin}</p>
                       <div className="mt-2">
                         <Badge
-                          variant={student.status === "Active" ? "default" : "secondary"}
+                          variant={student.status === "ACTIVE" ? "default" : "secondary"}
                           className={
-                            student.status === "Active"
+                            student.status === "ACTIVE"
                               ? "bg-green-100 text-green-800 hover:bg-green-100"
                               : "bg-gray-100 text-gray-800 hover:bg-gray-100"
                           }
                         >
-                          {student.status === "Active" ? "Активен" : "Неактивен"}
+                          {student.status === "ACTIVE" ? "Активен" : "Неактивен"}
                         </Badge>
                       </div>
                     </div>
@@ -58,11 +60,11 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{student.phoneNumber || "+7 (999) 123-4567"}</span>
+                        <span className="text-sm">{student.phoneNumber}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Направление:</span>
-                        <span className="text-sm font-medium">{student.course}</span>
+                        <span className="text-sm font-medium">{student.direction}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Гражданство:</span>
@@ -95,7 +97,7 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Полное имя</p>
-                        <p className="text-sm text-muted-foreground">{student.name}</p>
+                        <p className="text-sm text-muted-foreground">{student.firstName}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Email</p>
@@ -108,7 +110,7 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Пол</p>
                         <p className="text-sm text-muted-foreground">
-                          {student.gender === "male" ? "Мужской" : "Женский"}
+                          {student.gender}
                         </p>
                       </div>
                       <div className="space-y-1">
@@ -117,7 +119,7 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Телефон</p>
-                        <p className="text-sm text-muted-foreground">{student.phoneNumber || "+7 (999) 123-4567"}</p>
+                        {/* <p className="text-sm text-muted-foreground">{student.phoneNumber || "+7 (999) 123-4567"}</p> */}
                       </div>
                       <div className="space-y-1 md:col-span-2">
                         <p className="text-sm font-medium">Адрес</p>
@@ -125,7 +127,7 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
                       </div>
                       <div className="space-y-1 md:col-span-2">
                         <p className="text-sm font-medium">Экстренный контакт</p>
-                        <p className="text-sm text-muted-foreground">Иванов Иван Иванович (отец): +7 (999) 987-6543</p>
+                        <p className="text-sm text-muted-foreground">{student.firstName} {student.lastName} {student.middleName} (отец): +7 (999) 987-6543</p>
                       </div>
                     </div>
                   </TabsContent>
@@ -134,11 +136,11 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Направление</p>
-                        <p className="text-sm text-muted-foreground">{student.course}</p>
+                        <p className="text-sm text-muted-foreground">{student.direction}</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-sm font-medium">ID студента</p>
-                        <p className="text-sm text-muted-foreground">{student.studentId}</p>
+                        <p className="text-sm font-medium">ИИН студента</p>
+                        <p className="text-sm text-muted-foreground">{student.iin}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Дата зачисления</p>

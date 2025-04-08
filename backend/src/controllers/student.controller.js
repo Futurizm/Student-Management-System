@@ -6,7 +6,7 @@ class StudentController {
     const {
       iin, lastName, firstName, middleName, birthDate, gender, citizenship, nationality,
       admissionDate, graduationDate, studyLanguage, specialty, qualification, identityDocument,
-      medicalCertificate, profilePicture, groupId, direction
+      medicalCertificate, groupId, direction, phoneNumber, email, adress, notes
     } = req.body;
 
     if (req.user.role !== 'ADMIN' && req.user.role !== 'TEACHER') {
@@ -16,6 +16,10 @@ class StudentController {
     const formattedBirthDate = birthDate ? new Date(birthDate).toISOString() : undefined;
     const formattedAdmissionDate = admissionDate ? new Date(admissionDate).toISOString() : undefined;
     const formattedGraduationDate = graduationDate ? new Date(graduationDate).toISOString() : undefined;
+
+
+    const profilePicture = req.file ? `${req.file.destination}${req.file.filename}` : null;
+
 
     try {
       const student = await prisma.student.create({
@@ -38,6 +42,10 @@ class StudentController {
           profilePicture,
           groupId: groupId ? Number(groupId) : null,
           direction,
+          phoneNumber,
+          email,
+          adress,
+          notes
         },
       });
       res.status(201).json(student);
@@ -69,7 +77,7 @@ class StudentController {
     const {
       iin, lastName, firstName, middleName, birthDate, gender, citizenship, nationality,
       admissionDate, graduationDate, studyLanguage, specialty, qualification, identityDocument,
-      medicalCertificate, profilePicture, groupId, direction
+      medicalCertificate, groupId, direction, phoneNumber, email, adress, notes
     } = req.body;
 
     if (req.user.role !== 'ADMIN' && req.user.role !== 'TEACHER') {
@@ -79,6 +87,9 @@ class StudentController {
     const formattedBirthDate = birthDate ? new Date(birthDate).toISOString() : undefined;
     const formattedAdmissionDate = admissionDate ? new Date(admissionDate).toISOString() : undefined;
     const formattedGraduationDate = graduationDate ? new Date(graduationDate).toISOString() : undefined;
+
+    const profilePicture = req.file ? `${req.file.destination}${req.file.filename}` : undefined;
+    console.log(profilePicture)
 
     try {
       const student = await prisma.student.update({
@@ -99,9 +110,13 @@ class StudentController {
           qualification,
           identityDocument,
           medicalCertificate,
-          profilePicture,
+          profilePicture: profilePicture || undefined,
           groupId: groupId ? Number(groupId) : null,
           direction,
+          phoneNumber,
+          email,
+          adress,
+          notes,
         },
       });
       res.json(student);

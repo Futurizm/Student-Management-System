@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         "/dashboard/students/new",
         "/dashboard/groups",
         "/dashboard/teachers",
+        "/dashboard/teachers/new",
         "/dashboard/reports",
         "/dashboard/settings",
       ];

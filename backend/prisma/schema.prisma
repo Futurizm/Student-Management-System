@@ -47,15 +47,21 @@ model Student {
     gender             String?
     citizenship        String?
     nationality        String?
+    adress             String?
     admissionDate      DateTime?
     graduationDate     DateTime?
     studyLanguage      String?
+    emergencyContact   String?
     direction          String?
     specialty          String?
     qualification      String?
     identityDocument   String?
     medicalCertificate String?
     profilePicture     String?
+    notes              String?
+    phoneNumber        String?       @unique
+    email              String?       @unique
+    imageUrl           String?
     groupId            Int?
     group              Group?        @relation(fields: [groupId], references: [id])
     status             String        @default("ACTIVE")

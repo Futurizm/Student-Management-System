@@ -56,153 +56,34 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { AddStudentDialog } from "./add-student-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-// Sample data
-const data: Student[] = [
-  {
-    id: "STU001",
-    name: "Иванов Иван",
-    email: "ivanov@example.com",
-    studentId: "S12345",
-    course: "Информатика",
-    nationality: "Россия",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 123-4567",
-    gender: "male",
-  },
-  {
-    id: "STU002",
-    name: "Петрова Мария",
-    email: "petrova@example.com",
-    studentId: "S12346",
-    course: "Бизнес-администрирование",
-    nationality: "Россия",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 234-5678",
-    gender: "female",
-  },
-  {
-    id: "STU003",
-    name: "Сидоров Алексей",
-    email: "sidorov@example.com",
-    studentId: "S12347",
-    course: "Графический дизайн",
-    nationality: "Беларусь",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 345-6789",
-    gender: "male",
-  },
-  {
-    id: "STU004",
-    name: "Козлова Анна",
-    email: "kozlova@example.com",
-    studentId: "S12348",
-    course: "Психология",
-    nationality: "Казахстан",
-    status: "Inactive",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 456-7890",
-    gender: "female",
-  },
-  {
-    id: "STU005",
-    name: "Смирнов Дмитрий",
-    email: "smirnov@example.com",
-    studentId: "S12349",
-    course: "Инженерия",
-    nationality: "Россия",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 567-8901",
-    gender: "male",
-  },
-  {
-    id: "STU006",
-    name: "Кузнецов Сергей",
-    email: "kuznetsov@example.com",
-    studentId: "S12350",
-    course: "Медицина",
-    nationality: "Россия",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 678-9012",
-    gender: "male",
-  },
-  {
-    id: "STU007",
-    name: "Морозова Ольга",
-    email: "morozova@example.com",
-    studentId: "S12351",
-    course: "Юриспруденция",
-    nationality: "Россия",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 789-0123",
-    gender: "female",
-  },
-  {
-    id: "STU008",
-    name: "Васильев Игорь",
-    email: "vasiliev@example.com",
-    studentId: "S12352",
-    course: "Информатика",
-    nationality: "Украина",
-    status: "Inactive",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 890-1234",
-    gender: "male",
-  },
-  {
-    id: "STU009",
-    name: "Николаева Елена",
-    email: "nikolaeva@example.com",
-    studentId: "S12353",
-    course: "Бизнес-администрирование",
-    nationality: "Россия",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 901-2345",
-    gender: "female",
-  },
-  {
-    id: "STU010",
-    name: "Соколов Андрей",
-    email: "sokolov@example.com",
-    studentId: "S12354",
-    course: "Инженерия",
-    nationality: "Россия",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-    phoneNumber: "+7 (999) 012-3456",
-    gender: "male",
-  },
-]
+import { HOST, HOST_NO_API } from "@/lib/constants"
 
 export type Student = {
-  id: string
-  name: string
+  id: number
+  iin: number
+  firstName: string
+  lastName: string
+  middleName: string
   email: string
-  studentId: string
-  course: string
   nationality: string
-  status: "Active" | "Inactive"
-  imageUrl: string
+  citizenship: string
+  status: "ACTIVE" | "INACTIVE"
+  direction: string
   phoneNumber?: string
+  profilePicture?: string
   gender?: string
 }
 
 interface StudentTableProps {
-  filterStatus?: "Active" | "Inactive"
+  filterStatus?: "ACTIVE" | "INACTIVE"
 }
 
 export function StudentTable({ filterStatus }: StudentTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState({})
-  const [filteredData, setFilteredData] = useState(data)
+  const [filteredData, setFilteredData] = useState<Student[]>([])
+  const [allData, setAllData] = useState<Student[]>([])
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -212,33 +93,92 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // Применяем фильтры при изменении
-  useEffect(() => {
-    let result = [...data]
+  const fetchStudents = async (page = 1, limits = 10, search = "") => {
+    try {
+      const response = await fetch(`${HOST}/students?${new URLSearchParams({ page: page.toString(), limits: limits.toString(), search })}`, {
+        method: 'GET',
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
 
-    // Фильтр по статусу
+      if (!response.ok) {
+        throw new Error(`Ошибка сервера: ${response.status}`);
+      }
+      const data = await response.json()
+      return data
+    } catch (error: unknown) {
+      console.error("Ошибка при получении студентов:", error);
+      throw error;
+    }
+  }
+
+  // Функция для обновления списка студентов
+  const refreshStudents = async () => {
+    setIsRefreshing(true);
+    try {
+      const students = await fetchStudents(1, 10, searchQuery);
+      setFilteredData(students);
+      setAllData(students);
+      toast({
+        title: "Список обновлён",
+        description: "Данные студентов успешно обновлены",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Ошибка при обновлении студентов:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить список студентов",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
+    const loadStudents = async () => {
+      setIsRefreshing(true);
+      try {
+        const students = await fetchStudents(1, 10, searchQuery);
+        setFilteredData(students);
+        setAllData(students);
+      } catch (error) {
+        console.error("Ошибка при загрузке студентов:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить данные о студентах",
+          variant: "destructive",
+        });
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
+    loadStudents();
+  }, [searchQuery])
+
+  useEffect(() => {
+    let result = [...allData]
     if (statusFilter !== "all") {
       result = result.filter((student) => student.status === statusFilter)
     }
-
-    // Фильтр по направлению
     if (courseFilter !== "all") {
-      result = result.filter((student) => student.course === courseFilter)
+      result = result.filter((student) => student.direction === courseFilter)
     }
-
-    // Поиск по имени, email или ID
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase()
       result = result.filter(
         (student) =>
-          student.name.toLowerCase().includes(lowerQuery) ||
+          student.firstName.toLowerCase().includes(lowerQuery) ||
+          student.lastName.toLowerCase().includes(lowerQuery) ||
           student.email.toLowerCase().includes(lowerQuery) ||
-          student.studentId.toLowerCase().includes(lowerQuery),
+          String(student.iin).includes(lowerQuery)
       )
     }
-
     setFilteredData(result)
-  }, [statusFilter, courseFilter, searchQuery])
+  }, [statusFilter, courseFilter, searchQuery, allData])
 
   const handleViewStudent = (student: Student) => {
     setSelectedStudent(student)
@@ -255,33 +195,41 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
     setDeleteDialogOpen(true)
   }
 
-  const confirmDeleteStudent = () => {
+  const confirmDeleteStudent = async () => {
     if (selectedStudent) {
-      // В реальном приложении здесь был бы API-запрос на удаление
-      setFilteredData(filteredData.filter((student) => student.id !== selectedStudent.id))
-      toast({
-        title: "Студент удален",
-        description: `Студент ${selectedStudent.name} был успешно удален`,
-      })
-      setDeleteDialogOpen(false)
+      try {
+        const response = await fetch(`${HOST}/students/${selectedStudent.id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (!response.ok) throw new Error("Ошибка удаления студента");
+        setFilteredData(filteredData.filter((student) => student.id !== selectedStudent.id));
+        setAllData(allData.filter((student) => student.id !== selectedStudent.id));
+        toast({
+          title: "Студент удалён",
+          description: `Студент ${selectedStudent.firstName} был успешно удалён`,
+        });
+      } catch (error) {
+        console.error("Ошибка при удалении:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось удалить студента",
+          variant: "destructive",
+        });
+      }
+      setDeleteDialogOpen(false);
     }
   }
 
   const handleSaveStudent = (updatedStudent: Student) => {
-    // В реальном приложении здесь был бы API-запрос на обновление
-    setFilteredData(filteredData.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)))
+    setFilteredData(filteredData.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)));
+    setAllData(allData.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)));
   }
 
   const handleRefresh = () => {
-    setIsRefreshing(true)
-    // Имитация загрузки данных
-    setTimeout(() => {
-      setIsRefreshing(false)
-      toast({
-        title: "Данные обновлены",
-        description: "Список студентов успешно обновлен",
-      })
-    }, 1000)
+    refreshStudents();
   }
 
   const handleExport = () => {
@@ -291,10 +239,10 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
     })
   }
 
-  // Получаем уникальные направления для фильтра
-  const uniqueCourses = Array.from(new Set(data.map((student) => student.course)))
+  const uniqueCourses = Array.from(new Set(allData.map((student) => student.direction)))
 
   const columns: ColumnDef<Student>[] = [
+    // ... (оставляем колонки без изменений)
     {
       id: "select",
       header: ({ table }) => (
@@ -315,38 +263,38 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
       enableHiding: false,
     },
     {
+      accessorKey: "studentId",
+      header: "ID студента",
+      cell: ({ row }) => <div className="font-mono text-sm">{row.original.iin}</div>,
+    },
+    {
       accessorKey: "name",
       header: "Имя",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-9 w-9 border border-primary/10">
-            <AvatarImage src={row.original.imageUrl} alt={row.original.name} />
+            <AvatarImage src={`${HOST_NO_API}/${row.original.profilePicture}`} alt={row.original.firstName} />
             <AvatarFallback
               className={row.original.gender === "female" ? "bg-pink-100 text-pink-800" : "bg-blue-100 text-blue-800"}
             >
-              {row.original.name.charAt(0)}
+              {row.original.firstName.charAt(0)}
             </AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium">{row.original.name}</div>
-            <div className="text-xs text-muted-foreground">{row.original.email}</div>
+            <div className="font-medium">{row.original.firstName} {row.original.lastName}</div>
           </div>
         </div>
       ),
     },
     {
-      accessorKey: "studentId",
-      header: "ID студента",
-      cell: ({ row }) => <div className="font-mono text-sm">{row.original.studentId}</div>,
-    },
-    {
       accessorKey: "course",
       header: "Направление",
-      cell: ({ row }) => <div className="max-w-[180px] truncate font-medium">{row.original.course}</div>,
+      cell: ({ row }) => <div className="max-w-[180px] truncate font-medium">{row.original.direction}</div>,
     },
     {
       accessorKey: "nationality",
       header: "Гражданство",
+      cell: ({ row }) => <div className="max-w-[180px] truncate font-medium">{row.original.citizenship}</div>,
     },
     {
       accessorKey: "status",
@@ -355,14 +303,14 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
         const status = row.original.status
         return (
           <Badge
-            variant={status === "Active" ? "default" : "secondary"}
+            variant={status === "ACTIVE" ? "default" : "secondary"}
             className={
-              status === "Active"
+              status === "ACTIVE"
                 ? "bg-green-100 text-green-800 hover:bg-green-100"
                 : "bg-gray-100 text-gray-800 hover:bg-gray-100"
             }
           >
-            {status === "Active" ? "Активен" : "Неактивен"}
+            {status === "ACTIVE" ? "Активен" : "Неактивен"}
           </Badge>
         )
       },
@@ -383,7 +331,6 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
                 <p>Просмотр</p>
               </TooltipContent>
             </Tooltip>
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={() => handleEditStudent(row.original)}>
@@ -395,7 +342,6 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
                 <p>Редактировать</p>
               </TooltipContent>
             </Tooltip>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -450,11 +396,11 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
           <div>
             <CardTitle>Список студентов</CardTitle>
             <CardDescription>
-              Всего студентов: {filteredData.length} из {data.length}
+              Всего студентов: {filteredData.length} из {allData.length}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <AddStudentDialog />
+            <AddStudentDialog onStudentAdded={refreshStudents} />
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-1">
               <Download className="h-4 w-4" />
               Экспорт
@@ -472,6 +418,7 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        {/* ... (остальной код без изменений) */}
         <div className="px-6 py-3 border-b bg-muted/30">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="relative w-full md:w-80">
@@ -492,8 +439,8 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Все статусы</SelectItem>
-                    <SelectItem value="Active">Активные</SelectItem>
-                    <SelectItem value="Inactive">Неактивные</SelectItem>
+                    <SelectItem value="ACTIVE">Активные</SelectItem>
+                    <SelectItem value="INACTIVE">Неактивные</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -515,19 +462,16 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
             </div>
           </div>
         </div>
-
         <div className="rounded-md">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="bg-muted/50 hover:bg-muted/50">
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id} className="font-medium">
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    )
-                  })}
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} className="font-medium">
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
                 </TableRow>
               ))}
             </TableHeader>
@@ -570,8 +514,7 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
             {table.getFilteredSelectedRowModel().rows.length > 0 && (
               <div className="flex items-center gap-2">
                 <span>
-                  {table.getFilteredSelectedRowModel().rows.length} из {table.getFilteredRowModel().rows.length} строк
-                  выбрано
+                  {table.getFilteredSelectedRowModel().rows.length} из {table.getFilteredRowModel().rows.length} строк выбрано
                 </span>
                 <Button variant="outline" size="sm" className="h-8 gap-1 text-xs">
                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -630,7 +573,6 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
         </div>
       </CardContent>
 
-      {/* Модальное окно просмотра студента */}
       {selectedStudent && (
         <ViewStudentModal
           student={selectedStudent}
@@ -643,7 +585,6 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
         />
       )}
 
-      {/* Модальное окно редактирования студента */}
       {selectedStudent && (
         <EditStudentModal
           student={selectedStudent}
@@ -653,13 +594,12 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
         />
       )}
 
-      {/* Диалог подтверждения удаления */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
             <AlertDialogDescription>
-              Это действие нельзя отменить. Студент {selectedStudent?.name} будет удален из системы.
+              Это действие нельзя отменить. Студент {selectedStudent?.firstName} будет удалён из системы.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -673,4 +613,3 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
     </Card>
   )
 }
-
