@@ -1,0 +1,130 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id        Int      @id @default(autoincrement())
+    email     String   @unique
+    password  String
+    role      Role     @default(INSPECTOR)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    teacher   Teacher?
+}
+
+model Teacher {
+    id             Int       @id @default(autoincrement())
+    userId         Int       @unique
+    user           User      @relation(fields: [userId], references: [id])
+    lastName       String?
+    firstName      String?
+    middleName     String?
+    birthDate      DateTime?
+    phone          String?
+    address        String?
+    position       String?
+    department     String?
+    subjects       String? // JSON-строка для предметов
+    education      String?
+    experience     String?
+    profilePicture String?
+    groups         Group[]
+    courses        Course[]
+}
+
+model Student {
+    id                 Int           @id @default(autoincrement())
+    iin                String?       @unique
+    lastName           String?
+    firstName          String?
+    middleName         String?
+    birthDate          DateTime?
+    gender             String?
+    citizenship        String?
+    nationality        String?
+    admissionDate      DateTime?
+    graduationDate     DateTime?
+    studyLanguage      String?
+    specialty          String?
+    qualification      String?
+    identityDocument   String?
+    medicalCertificate String?
+    profilePicture     String?
+    groupId            Int?
+    group              Group?        @relation(fields: [groupId], references: [id])
+    status             String        @default("ACTIVE")
+    documents          Document[]
+    attendance         Attendance[]
+    performance        Performance[]
+}
+
+model Group {
+    id             Int           @id @default(autoincrement())
+    name           String        @unique
+    startDate      DateTime?
+    endDate        DateTime?
+    specialty      String?
+    description    String?
+    students       Student[]
+    schedule       Json?
+    courses        Course[]      @relation("GroupCourses")
+    teacherId      Int?
+    teacher        Teacher?      @relation(fields: [teacherId], references: [id])
+    courseNumberId Int?
+    courseNumber   CourseNumber? @relation(fields: [courseNumberId], references: [id])
+}
+
+model CourseNumber {
+    id          Int     @id @default(autoincrement())
+    name        String  @unique
+    description String?
+    groups      Group[]
+}
+
+model Course {
+    id          Int           @id @default(autoincrement())
+    name        String
+    description String?
+    teacherId   Int?
+    teacher     Teacher?      @relation(fields: [teacherId], references: [id])
+    groups      Group[]       @relation("GroupCourses")
+    schedule    Json?
+    performance Performance[]
+}
+
+model Document {
+    id        Int     @id @default(autoincrement())
+    studentId Int
+    student   Student @relation(fields: [studentId], references: [id])
+    filePath  String
+    fileName  String
+}
+
+model Attendance {
+    id        Int      @id @default(autoincrement())
+    studentId Int
+    student   Student  @relation(fields: [studentId], references: [id])
+    date      DateTime
+    status    String
+}
+
+model Performance {
+    id        Int      @id @default(autoincrement())
+    studentId Int
+    student   Student  @relation(fields: [studentId], references: [id])
+    courseId  Int
+    course    Course   @relation(fields: [courseId], references: [id])
+    grade     Float
+    date      DateTime
+}
+
+enum Role {
+    ADMIN
+    TEACHER
+    INSPECTOR
+}
