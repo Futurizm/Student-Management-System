@@ -57,6 +57,7 @@ import {
 import { AddStudentDialog } from "./add-student-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { HOST, HOST_NO_API } from "@/lib/constants"
+import * as XLSX from "xlsx"
 
 export type Student = {
   id: number
@@ -96,67 +97,63 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
   const fetchStudents = async (page = 1, limits = 10, search = "") => {
     try {
       const response = await fetch(`${HOST}/students?${new URLSearchParams({ page: page.toString(), limits: limits.toString(), search })}`, {
-        method: 'GET',
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       })
-
-      if (!response.ok) {
-        throw new Error(`Ошибка сервера: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Ошибка сервера: ${response.status}`)
       const data = await response.json()
       return data
-    } catch (error: unknown) {
-      console.error("Ошибка при получении студентов:", error);
-      throw error;
+    } catch (error) {
+      console.error("Ошибка при получении студентов:", error)
+      throw error
     }
   }
 
-  // Функция для обновления списка студентов
   const refreshStudents = async () => {
-    setIsRefreshing(true);
+    setIsRefreshing(true)
     try {
-      const students = await fetchStudents(1, 10, searchQuery);
-      setFilteredData(students);
-      setAllData(students);
+      const students = await fetchStudents(1, 10, searchQuery)
+      setFilteredData(students)
+      setAllData(students)
       toast({
         title: "Список обновлён",
         description: "Данные студентов успешно обновлены",
         variant: "success",
-      });
+      })
     } catch (error) {
-      console.error("Ошибка при обновлении студентов:", error);
+      console.error("Ошибка при обновлении студентов:", error)
       toast({
         title: "Ошибка",
         description: "Не удалось обновить список студентов",
         variant: "destructive",
-      });
+      })
     } finally {
-      setIsRefreshing(false);
+      setIsRefreshing(false)
     }
   }
 
   useEffect(() => {
     const loadStudents = async () => {
-      setIsRefreshing(true);
+      setIsRefreshing(true)
       try {
-        const students = await fetchStudents(1, 10, searchQuery);
-        setFilteredData(students);
-        setAllData(students);
+        const students = await fetchStudents(1, 10, searchQuery)
+        setFilteredData(students)
+        setAllData(students)
       } catch (error) {
-        console.error("Ошибка при загрузке студентов:", error);
+        console.error("Ошибка при загрузке студентов:", error)
         toast({
           title: "Ошибка",
           description: "Не удалось загрузить данные о студентах",
           variant: "destructive",
-        });
+        })
       } finally {
-        setIsRefreshing(false);
+        setIsRefreshing(false)
       }
-    };
-    loadStudents();
+    }
+    loadStudents()
   }, [searchQuery])
 
   useEffect(() => {
@@ -180,69 +177,34 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
     setFilteredData(result)
   }, [statusFilter, courseFilter, searchQuery, allData])
 
-  const handleViewStudent = (student: Student) => {
-    setSelectedStudent(student)
-    setViewModalOpen(true)
-  }
-
-  const handleEditStudent = (student: Student) => {
-    setSelectedStudent(student)
-    setEditModalOpen(true)
-  }
-
-  const handleDeleteStudent = (student: Student) => {
-    setSelectedStudent(student)
-    setDeleteDialogOpen(true)
-  }
-
-  const confirmDeleteStudent = async () => {
-    if (selectedStudent) {
-      try {
-        const response = await fetch(`${HOST}/students/${selectedStudent.id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        if (!response.ok) throw new Error("Ошибка удаления студента");
-        setFilteredData(filteredData.filter((student) => student.id !== selectedStudent.id));
-        setAllData(allData.filter((student) => student.id !== selectedStudent.id));
-        toast({
-          title: "Студент удалён",
-          description: `Студент ${selectedStudent.firstName} был успешно удалён`,
-        });
-      } catch (error) {
-        console.error("Ошибка при удалении:", error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось удалить студента",
-          variant: "destructive",
-        });
-      }
-      setDeleteDialogOpen(false);
-    }
-  }
-
-  const handleSaveStudent = (updatedStudent: Student) => {
-    setFilteredData(filteredData.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)));
-    setAllData(allData.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)));
-  }
-
-  const handleRefresh = () => {
-    refreshStudents();
-  }
-
   const handleExport = () => {
+    const selectedRows = table.getSelectedRowModel().rows
+    const dataToExport = selectedRows.length > 0
+      ? selectedRows.map(row => row.original) // Экспорт только выбранных
+      : filteredData // Если ничего не выбрано, экспорт отключён, так что это не сработает
+
+    const exportData = dataToExport.map(student => ({
+      "ID": student.iin,
+      "Имя": `${student.firstName} ${student.lastName}`,
+      "Направление": student.direction,
+      "Гражданство": student.citizenship,
+      "Статус": student.status === "ACTIVE" ? "Активен" : "Неактивен",
+      "Email": student.email,
+      "Телефон": student.phoneNumber || "",
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Студенты")
+    XLSX.writeFile(workbook, "students_report.xlsx")
+
     toast({
-      title: "Экспорт данных",
-      description: "Данные успешно экспортированы в CSV",
+      title: "Экспорт успешен",
+      description: `Экспортировано ${exportData.length} студентов`,
     })
   }
 
-  const uniqueCourses = Array.from(new Set(allData.map((student) => student.direction)))
-
   const columns: ColumnDef<Student>[] = [
-    // ... (оставляем колонки без изменений)
     {
       id: "select",
       header: ({ table }) => (
@@ -264,7 +226,7 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
     },
     {
       accessorKey: "studentId",
-      header: "ИИН студента",
+      header: "ID студента",
       cell: ({ row }) => <div className="font-mono text-sm">{row.original.iin}</div>,
     },
     {
@@ -389,6 +351,61 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
     },
   })
 
+  // Функции для управления модальными окнами и удалением остаются без изменений
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student)
+    setViewModalOpen(true)
+  }
+
+  const handleEditStudent = (student: Student) => {
+    setSelectedStudent(student)
+    setEditModalOpen(true)
+  }
+
+  const handleDeleteStudent = (student: Student) => {
+    setSelectedStudent(student)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteStudent = async () => {
+    if (selectedStudent) {
+      try {
+        const response = await fetch(`${HOST}/students/${selectedStudent.id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        })
+        if (!response.ok) throw new Error("Ошибка удаления студента")
+        setFilteredData(filteredData.filter((student) => student.id !== selectedStudent.id))
+        setAllData(allData.filter((student) => student.id !== selectedStudent.id))
+        toast({
+          title: "Студент удалён",
+          description: `Студент ${selectedStudent.firstName} был успешно удалён`,
+        })
+      } catch (error) {
+        console.error("Ошибка при удалении:", error)
+        toast({
+          title: "Ошибка",
+          description: "Не удалось удалить студента",
+          variant: "destructive",
+        })
+      }
+      setDeleteDialogOpen(false)
+    }
+  }
+
+  const handleSaveStudent = (updatedStudent: Student) => {
+    setFilteredData(filteredData.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)))
+    setAllData(allData.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)))
+  }
+
+  const handleRefresh = () => {
+    refreshStudents()
+  }
+
+  const uniqueCourses = Array.from(new Set(allData.map((student) => student.direction)))
+
   return (
     <Card className="border-none shadow-sm">
       <CardHeader className="pb-3">
@@ -401,7 +418,13 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
           </div>
           <div className="flex items-center gap-2">
             <AddStudentDialog onStudentAdded={refreshStudents} />
-            <Button variant="outline" size="sm" onClick={handleExport} className="gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={table.getSelectedRowModel().rows.length === 0} // Отключение, если ничего не выбрано
+              className="gap-1"
+            >
               <Download className="h-4 w-4" />
               Экспорт
             </Button>
@@ -418,7 +441,6 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {/* ... (остальной код без изменений) */}
         <div className="px-6 py-3 border-b bg-muted/30">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="relative w-full md:w-80">
@@ -528,9 +550,7 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
               <p className="text-sm font-medium">Строк на странице</p>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value))
-                }}
+                onValueChange={(value) => table.setPageSize(Number(value))}
               >
                 <SelectTrigger className="h-8 w-[70px]">
                   <SelectValue placeholder={table.getState().pagination.pageSize} />

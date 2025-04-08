@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Home,
   Users,
@@ -17,19 +17,38 @@ import {
   FileSpreadsheet,
   School,
   ClipboardList,
-} from "lucide-react"
+  CheckSquare,
+} from "lucide-react";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { InspectorForm } from "./inspector-form"; // Форма создания пользователя с ролью INSPECTOR
 
 interface SidebarProps {
-  open: boolean
-  setOpen: (open: boolean) => void
-  userRole: "ADMIN" | "TEACHER" | "INSPECTOR" | null
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  userRole: "ADMIN" | "TEACHER" | "INSPECTOR" | null;
 }
 
 export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
-  const pathname = usePathname()
+  const pathname = usePathname();
+  const [isInspectorModalOpen, setIsInspectorModalOpen] = useState(false);
 
   // Маршруты для администратора
-  const adminRoutes = [
+  interface Route {
+    label: string;
+    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+    href: string;
+    isDialogTrigger?: boolean;
+  }
+
+  const adminRoutes: Route[] = [
     {
       label: "Панель управления",
       icon: Home,
@@ -44,11 +63,6 @@ export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
       label: "Группы",
       icon: Users,
       href: "/dashboard/groups",
-    },  
-    {
-      label: "Добавить студента",
-      icon: UserPlus,
-      href: "/dashboard/students/new",
     },
     {
       label: "Преподаватели",
@@ -65,7 +79,18 @@ export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
       icon: Settings,
       href: "/dashboard/settings",
     },
-  ]
+    // Вкладка для создания инспектора (пользователя с ролью INSPECTOR)
+    ...(userRole === "ADMIN"
+      ? [
+          {
+            label: "Добавить инспектора",
+            icon: CheckSquare,
+            href: "#",
+            isDialogTrigger: true,
+          },
+        ]
+      : []),
+  ];
 
   // Маршруты для преподавателя
   const teacherRoutes = [
@@ -89,7 +114,7 @@ export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
       icon: FileSpreadsheet,
       href: "/dashboard/reports",
     },
-  ]
+  ];
 
   // Маршруты для проверяющего
   const inspectorRoutes = [
@@ -118,17 +143,17 @@ export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
       icon: ClipboardList,
       href: "/dashboard/reports",
     },
-  ]
+  ];
 
   // Выбираем маршруты в зависимости от роли
-  const routes = userRole === "ADMIN" ? adminRoutes : userRole === "TEACHER" ? teacherRoutes : inspectorRoutes
+  const routes = userRole === "ADMIN" ? adminRoutes : userRole === "TEACHER" ? teacherRoutes : inspectorRoutes;
 
   return (
     <>
       {/* Mobile overlay */}
       {open && <div className="fixed inset-0 z-20 bg-black/50 md:hidden" onClick={() => setOpen(false)} />}
 
-      <aside
+<aside
         className={cn(
           "fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r bg-white transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
@@ -136,10 +161,8 @@ export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
       >
         <div className="flex h-16 items-center justify-between border-b px-4">
           <div className="flex items-center gap-2">
-            <div className="rounded-md bg-blue-600 p-1">
-              <School className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-lg font-bold text-blue-700">EduManage Pro</span>
+          <img src="/kit-icon.svg" alt="kit_logo" className="h-8 w-8" /> 
+          <span className="text-lg font-bold text-blue-700">EduManage Pro</span>
           </div>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(false)}>
             <X className="h-5 w-5" />
@@ -150,21 +173,53 @@ export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
         </div>
         <div className="flex-1 overflow-auto py-4">
           <nav className="grid gap-1 px-2">
-            {routes.map((route) => (
-              <Link
-                key={route.href}
-                href={route.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  pathname === route.href
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
-                )}
-              >
-                <route.icon className="h-5 w-5" />
-                {route.label}
-              </Link>
-            ))}
+            {routes.map((route) =>
+              route.isDialogTrigger ? (
+                <Dialog
+                  key={route.label}
+                  open={isInspectorModalOpen}
+                  onOpenChange={setIsInspectorModalOpen}
+                >
+                  <DialogTrigger asChild>
+                    <button
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full text-left",
+                        pathname === route.href
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+                      )}
+                      onClick={() => setIsInspectorModalOpen(true)}
+                    >
+                      <route.icon className="h-5 w-5" />
+                      {route.label}
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Создать инспектора</DialogTitle>
+                      <DialogDescription>
+                        Создайте нового пользователя с ролью "Проверяющий".
+                      </DialogDescription>
+                    </DialogHeader>
+                    <InspectorForm onClose={() => setIsInspectorModalOpen(false)} />
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    pathname === route.href
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+                  )}
+                >
+                  <route.icon className="h-5 w-5" />
+                  {route.label}
+                </Link>
+              ),
+            )}
           </nav>
         </div>
         <div className="border-t p-4">
@@ -184,6 +239,5 @@ export function Sidebar({ open, setOpen, userRole = "ADMIN" }: SidebarProps) {
         </div>
       </aside>
     </>
-  )
+  );
 }
-

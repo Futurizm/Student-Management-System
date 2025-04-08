@@ -41,7 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const adminRoutes = [
         "/dashboard/admin",
         "/dashboard/students",
-        "/dashboard/students/new",
         "/dashboard/groups", // Base route
         "/dashboard/teachers",
         "/dashboard/reports",

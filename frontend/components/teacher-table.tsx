@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronLeft, ChevronRight, Eye, Pencil, Router, Trash2 } from "lucide-react";
+import { ArrowUpDown, ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import * as XLSX from "xlsx"; // Import xlsx library
 
 export type Teacher = {
   id: string;
@@ -70,17 +71,14 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
 
   const fetchTeachers = async () => {
     try {
-      console.log("Fetching teachers...");
       const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("Токен авторизации отсутствует. Пожалуйста, войдите в систему.");
       }
-      console.log("Token found:", token);
 
       const response = await fetch("http://localhost:5000/api/teachers", {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       });
-      console.log("Response status:", response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -88,39 +86,38 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
       }
 
       const data = await response.json();
-      console.log("Fetched data:", data);
-
       const mappedData = data.map((teacher: any) => ({
         id: teacher.id.toString(),
         firstName: teacher.firstName,
         lastName: teacher.lastName,
         middleName: teacher.middleName,
-        name: `${teacher.lastName} ${teacher.firstName} ${teacher.middleName || ""}`.trim(),
+        name: (`${teacher.lastName} ${teacher.firstName} ${teacher.middleName || ""}`).trim(),
         email: teacher.user.email,
         department: teacher.department,
         role: teacher.position,
         status: "Active" as const, // Пока статично
         imageUrl: teacher.imageUrl || "/placeholder.svg?height=40&width=40",
       }));
-      console.log("Mapped data:", mappedData);
 
       const filtered = filterStatus ? mappedData.filter((teacher) => teacher.status === filterStatus) : mappedData;
       setFilteredData(filtered);
     } catch (err: any) {
-      console.error("Error in fetchTeachers:", err);
       setError(err.message);
     } finally {
       setLoading(false);
-      console.log("Loading set to false");
     }
   };
 
   const handleViewTeacher = (teacher: Teacher) => {
-   router.push(`/dashboard/teachers/${teacher.id}`);
+    router.push(`/dashboard/teachers/${teacher.id}`);
   };
 
+  const handleEditTeacher = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setEditModalOpen(true);
+  };
 
-  const handleDeleteTeacher = (teacher: Teacher) => {
+const handleDeleteTeacher = (teacher: Teacher) => {
     setSelectedTeacher(teacher);
     setDeleteDialogOpen(true);
   };
@@ -178,7 +175,7 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
                 firstName: updatedData.firstName,
                 lastName: updatedData.lastName,
                 middleName: updatedData.middleName,
-                name: `${updatedData.lastName} ${updatedData.firstName} ${updatedData.middleName || ""}`.trim(),
+                name: (`${updatedData.lastName} ${updatedData.firstName} ${updatedData.middleName || ""}`).trim(),
                 email: updatedData.user.email,
                 department: updatedData.department,
                 role: updatedData.position,
@@ -199,7 +196,30 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
     }
   };
 
-  const columns: ColumnDef<Teacher>[] = [
+  // Function to export selected teachers to Excel
+  const exportSelectedTeachers = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows;
+    const isAllSelected = table.getIsAllPageRowsSelected();
+
+    const dataToExport = isAllSelected
+      ? filteredData // Export all teachers if all are selected
+      : selectedRows.map((row) => row.original); // Export only selected teachers
+
+    const exportData = dataToExport.map((teacher) => ({
+      Имя: teacher.name,
+      Email: teacher.email,
+      Отделение: teacher.department,
+      Должность: teacher.role,
+      Статус: teacher.status,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Teachers");
+    XLSX.writeFile(workbook, `teachers_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
+const columns: ColumnDef<Teacher>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -314,7 +334,7 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
     },
   ];
 
-  const table = useReactTable({
+const table = useReactTable({
     data: filteredData,
     columns,
     onSortingChange: setSorting,
@@ -332,17 +352,25 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
   });
 
   if (loading) {
-    console.log("Rendering loading state");
     return <p>Загрузка преподавателей...</p>;
   }
   if (error) {
-    console.log("Rendering error state:", error);
     return <p>{error}</p>;
   }
 
-  console.log("Rendering table with data:", filteredData);
+  const selectedRowCount = table.getFilteredSelectedRowModel().rows.length;
+
   return (
     <div>
+      <div className="flex justify-end mb-4">
+        <Button
+          onClick={exportSelectedTeachers}
+          disabled={selectedRowCount === 0}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          Экспорт преподавателей
+        </Button>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -383,7 +411,7 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
       </div>
       <div className="flex items-center justify-between space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} из {table.getFilteredRowModel().rows.length} строк выбрано
+          {selectedRowCount} из {table.getFilteredRowModel().rows.length} строк выбрано
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -430,7 +458,7 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
         />
       )}
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
