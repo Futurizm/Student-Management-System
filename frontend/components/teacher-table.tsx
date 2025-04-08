@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -11,16 +11,17 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { ArrowUpDown, ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { ViewTeacherModal } from "./view-teacher-modal"
-import { EditTeacherModal } from "./edit-teacher-modal"
-import { toast } from "@/components/ui/use-toast"
+} from "@tanstack/react-table";
+import { ArrowUpDown, ChevronLeft, ChevronRight, Eye, Pencil, Router, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { ViewTeacherModal } from "./view-teacher-modal";
+import { EditTeacherModal } from "./edit-teacher-modal";
+import { toast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,149 +31,173 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { motion } from "framer-motion"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-
-// Sample data
-const data: Teacher[] = [
-  {
-    id: "T001",
-    name: "Иванов Иван Иванович",
-    email: "ivanov@example.com",
-    department: "Информатика",
-    role: "Профессор",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "T002",
-    name: "Петрова Мария Сергеевна",
-    email: "petrova@example.com",
-    department: "Бизнес",
-    role: "Доцент",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "T003",
-    name: "Сидоров Алексей Петрович",
-    email: "sidorov@example.com",
-    department: "Инженерия",
-    role: "Профессор",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "T004",
-    name: "Козлова Елена Дмитриевна",
-    email: "kozlova@example.com",
-    department: "Психология",
-    role: "Старший преподаватель",
-    status: "On Leave",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "T005",
-    name: "Смирнов Дмитрий Александрович",
-    email: "smirnov@example.com",
-    department: "Дизайн",
-    role: "Профессор",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "T006",
-    name: "Николаева Анна Владимировна",
-    email: "nikolaeva@example.com",
-    department: "Медицина",
-    role: "Доцент",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "T007",
-    name: "Кузнецов Сергей Игоревич",
-    email: "kuznetsov@example.com",
-    department: "Юриспруденция",
-    role: "Профессор",
-    status: "Inactive",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "T008",
-    name: "Морозова Ольга Андреевна",
-    email: "morozova@example.com",
-    department: "Информатика",
-    role: "Старший преподаватель",
-    status: "Active",
-    imageUrl: "/placeholder.svg?height=40&width=40",
-  },
-]
+} from "@/components/ui/alert-dialog";
+import { motion } from "framer-motion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export type Teacher = {
-  id: string
-  name: string
-  email: string
-  department: string
-  role: string
-  status: "Active" | "Inactive" | "On Leave"
-  imageUrl: string
-}
+  id: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  email: string;
+  department: string;
+  role: string;
+  status: "Active" | "Inactive" | "On Leave";
+  imageUrl?: string;
+};
 
 interface TeacherTableProps {
-  filterStatus?: "Active" | "Inactive" | "On Leave"
+  filterStatus?: "Active" | "Inactive" | "On Leave";
 }
 
 export function TeacherTable({ filterStatus }: TeacherTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [rowSelection, setRowSelection] = useState({})
-  const [filteredData, setFilteredData] = useState(data)
-  const [viewModalOpen, setViewModalOpen] = useState(false)
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [rowSelection, setRowSelection] = useState({});
+  const [filteredData, setFilteredData] = useState<Teacher[]>([]);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    if (filterStatus) {
-      setFilteredData(data.filter((teacher) => teacher.status === filterStatus))
-    } else {
-      setFilteredData(data)
+    fetchTeachers();
+  }, [filterStatus]);
+
+  const fetchTeachers = async () => {
+    try {
+      console.log("Fetching teachers...");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Токен авторизации отсутствует. Пожалуйста, войдите в систему.");
+      }
+      console.log("Token found:", token);
+
+      const response = await fetch("http://localhost:5000/api/teachers", {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка при загрузке преподавателей: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log("Fetched data:", data);
+
+      const mappedData = data.map((teacher: any) => ({
+        id: teacher.id.toString(),
+        firstName: teacher.firstName,
+        lastName: teacher.lastName,
+        middleName: teacher.middleName,
+        name: `${teacher.lastName} ${teacher.firstName} ${teacher.middleName || ""}`.trim(),
+        email: teacher.user.email,
+        department: teacher.department,
+        role: teacher.position,
+        status: "Active" as const, // Пока статично
+        imageUrl: teacher.imageUrl || "/placeholder.svg?height=40&width=40",
+      }));
+      console.log("Mapped data:", mappedData);
+
+      const filtered = filterStatus ? mappedData.filter((teacher) => teacher.status === filterStatus) : mappedData;
+      setFilteredData(filtered);
+    } catch (err: any) {
+      console.error("Error in fetchTeachers:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      console.log("Loading set to false");
     }
-  }, [filterStatus])
+  };
 
   const handleViewTeacher = (teacher: Teacher) => {
-    setSelectedTeacher(teacher)
-    setViewModalOpen(true)
-  }
+   router.push(`/dashboard/teachers/${teacher.id}`);
+  };
 
-  const handleEditTeacher = (teacher: Teacher) => {
-    setSelectedTeacher(teacher)
-    setEditModalOpen(true)
-  }
 
   const handleDeleteTeacher = (teacher: Teacher) => {
-    setSelectedTeacher(teacher)
-    setDeleteDialogOpen(true)
-  }
+    setSelectedTeacher(teacher);
+    setDeleteDialogOpen(true);
+  };
 
-  const confirmDeleteTeacher = () => {
+  const confirmDeleteTeacher = async () => {
     if (selectedTeacher) {
-      // В реальном приложении здесь был бы API-запрос на удаление
-      setFilteredData(filteredData.filter((teacher) => teacher.id !== selectedTeacher.id))
-      toast({
-        title: "Преподаватель удален",
-        description: `Преподаватель ${selectedTeacher.name} был успешно удален`,
-      })
-      setDeleteDialogOpen(false)
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("Please log in");
+        const response = await fetch(`http://localhost:5000/api/teachers/${selectedTeacher.id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to delete teacher");
+        setFilteredData(filteredData.filter((teacher) => teacher.id !== selectedTeacher.id));
+        toast({
+          title: "Преподаватель удален",
+          description: `Преподаватель ${selectedTeacher.name} был успешно удален`,
+        });
+      } catch (err: any) {
+        toast({
+          title: "Ошибка",
+          description: err.message,
+          variant: "destructive",
+        });
+      } finally {
+        setDeleteDialogOpen(false);
+      }
     }
-  }
+  };
 
-  const handleSaveTeacher = (updatedTeacher: Teacher) => {
-    // В реальном приложении здесь был бы API-запрос на обновление
-    setFilteredData(filteredData.map((teacher) => (teacher.id === updatedTeacher.id ? updatedTeacher : teacher)))
-  }
+  const handleSaveTeacher = async (updatedTeacher: Teacher) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Please log in");
+      const response = await fetch(`http://localhost:5000/api/teachers/${updatedTeacher.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: updatedTeacher.firstName,
+          lastName: updatedTeacher.lastName,
+          middleName: updatedTeacher.middleName,
+          email: updatedTeacher.email,
+          department: updatedTeacher.department,
+          position: updatedTeacher.role,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to update teacher");
+      const updatedData = await response.json();
+      setFilteredData(
+        filteredData.map((teacher) =>
+          teacher.id === updatedTeacher.id
+            ? {
+                ...teacher,
+                firstName: updatedData.firstName,
+                lastName: updatedData.lastName,
+                middleName: updatedData.middleName,
+                name: `${updatedData.lastName} ${updatedData.firstName} ${updatedData.middleName || ""}`.trim(),
+                email: updatedData.user.email,
+                department: updatedData.department,
+                role: updatedData.position,
+              }
+            : teacher
+        )
+      );
+      toast({
+        title: "Преподаватель обновлен",
+        description: `Данные преподавателя ${updatedTeacher.name} успешно обновлены`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Ошибка",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const columns: ColumnDef<Teacher>[] = [
     {
@@ -209,14 +234,12 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
     },
     {
       accessorKey: "email",
-      header: ({ column }) => {
-        return (
-          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            Email
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Email
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
     },
     {
       accessorKey: "department",
@@ -230,7 +253,7 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
       accessorKey: "status",
       header: "Статус",
       cell: ({ row }) => {
-        const status = row.original.status
+        const status = row.original.status;
         return (
           <Badge
             variant={status === "Active" ? "default" : "secondary"}
@@ -238,13 +261,13 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
               status === "Active"
                 ? "bg-green-100 text-green-800 hover:bg-green-100"
                 : status === "On Leave"
-                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                  : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                : "bg-gray-100 text-gray-800 hover:bg-gray-100"
             }
           >
             {status}
           </Badge>
-        )
+        );
       },
     },
     {
@@ -263,7 +286,6 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
                 <p>Просмотр</p>
               </TooltipContent>
             </Tooltip>
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={() => handleEditTeacher(row.original)}>
@@ -275,7 +297,6 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
                 <p>Редактировать</p>
               </TooltipContent>
             </Tooltip>
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={() => handleDeleteTeacher(row.original)}>
@@ -291,7 +312,7 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
         </TooltipProvider>
       ),
     },
-  ]
+  ];
 
   const table = useReactTable({
     data: filteredData,
@@ -308,8 +329,18 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
       columnFilters,
       rowSelection,
     },
-  })
+  });
 
+  if (loading) {
+    console.log("Rendering loading state");
+    return <p>Загрузка преподавателей...</p>;
+  }
+  if (error) {
+    console.log("Rendering error state:", error);
+    return <p>{error}</p>;
+  }
+
+  console.log("Rendering table with data:", filteredData);
   return (
     <div>
       <div className="rounded-md border">
@@ -317,13 +348,11 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -380,20 +409,18 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
         </div>
       </div>
 
-      {/* Модальное окно просмотра преподавателя */}
       {selectedTeacher && (
         <ViewTeacherModal
           teacher={selectedTeacher}
           isOpen={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
           onEdit={() => {
-            setViewModalOpen(false)
-            setTimeout(() => setEditModalOpen(true), 100)
+            setViewModalOpen(false);
+            setTimeout(() => setEditModalOpen(true), 100);
           }}
         />
       )}
 
-      {/* Модальное окно редактирования преподавателя */}
       {selectedTeacher && (
         <EditTeacherModal
           teacher={selectedTeacher}
@@ -403,7 +430,6 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
         />
       )}
 
-      {/* Диалог подтверждения удаления */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -421,6 +447,5 @@ export function TeacherTable({ filterStatus }: TeacherTableProps) {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }
-

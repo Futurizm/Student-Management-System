@@ -42,9 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         "/dashboard/admin",
         "/dashboard/students",
         "/dashboard/students/new",
-        "/dashboard/groups",
+        "/dashboard/groups", // Base route
         "/dashboard/teachers",
-        "/dashboard/teachers/new",
         "/dashboard/reports",
         "/dashboard/settings",
       ];
@@ -57,14 +56,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const inspectorRoutes = [
         "/dashboard/inspector",
         "/dashboard/students",
-        "/dashboard/groups",
+        "/dashboard/groups", // Base route
         "/dashboard/teachers",
         "/dashboard/reports",
       ];
-  
-      if (role === "ADMIN") return adminRoutes.includes(pathname);
-      if (role === "TEACHER") return teacherRoutes.includes(pathname);
-      if (role === "INSPECTOR") return inspectorRoutes.includes(pathname);
+    
+      if (role === "ADMIN") {
+        return adminRoutes.some(route => pathname === route || pathname.startsWith(route + "/"));
+      }
+      if (role === "TEACHER") {
+        return teacherRoutes.some(route => pathname === route || pathname.startsWith(route + "/"));
+      }
+      if (role === "INSPECTOR") {
+        return inspectorRoutes.some(route => pathname === route || pathname.startsWith(route + "/"));
+      }
       return false;
     };
   

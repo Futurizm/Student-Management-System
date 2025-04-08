@@ -1,80 +1,54 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { format } from "date-fns"
-import { ru } from "date-fns/locale"
-import { CalendarIcon, Loader2, Upload, CheckCircle, Save, ArrowLeft, User } from "lucide-react"
-
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "@/components/ui/use-toast"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
-import { Progress } from "@/components/ui/progress"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { CalendarIcon, Loader2, Upload, CheckCircle, Save, ArrowLeft, User } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Progress } from "@/components/ui/progress";
 
 const formSchema = z.object({
-  firstName: z.string().min(2, {
-    message: "Имя должно содержать не менее 2 символов",
-  }),
-  lastName: z.string().min(2, {
-    message: "Фамилия должна содержать не менее 2 символов",
-  }),
+  firstName: z.string().min(2, { message: "Имя должно содержать не менее 2 символов" }),
+  lastName: z.string().min(2, { message: "Фамилия должна содержать не менее 2 символов" }),
   middleName: z.string().optional(),
-  email: z.string().email({
-    message: "Введите корректный email адрес",
-  }),
-  phone: z.string().min(5, {
-    message: "Номер телефона должен содержать не менее 5 символов",
-  }),
-  dateOfBirth: z.date({
-    required_error: "Дата рождения обязательна",
-  }),
-  department: z.string({
-    required_error: "Выберите отделение",
-  }),
-  position: z.string({
-    required_error: "Выберите должность",
-  }),
-  subjects: z.array(z.string()).min(1, {
-    message: "Выберите хотя бы один предмет",
-  }),
-  education: z.string().min(5, {
-    message: "Информация об образовании должна содержать не менее 5 символов",
-  }),
-  experience: z.string().min(5, {
-    message: "Информация об опыте работы должна содержать не менее 5 символов",
-  }),
-  address: z.string().min(5, {
-    message: "Адрес должен содержать не менее 5 символов",
-  }),
+  email: z.string().email({ message: "Введите корректный email адрес" }),
+  phone: z.string().min(5, { message: "Номер телефона должен содержать не менее 5 символов" }),
+  dateOfBirth: z.date({ required_error: "Дата рождения обязательна" }),
+  department: z.string({ required_error: "Выберите отделение" }),
+  position: z.string({ required_error: "Выберите должность" }),
+  subjects: z.array(z.string()).min(1, { message: "Выберите хотя бы один предмет" }),
+  education: z.string().min(5, { message: "Информация об образовании должна содержать не менее 5 символов" }),
+  experience: z.string().min(5, { message: "Информация об опыте работы должна содержать не менее 5 символов" }),
+  address: z.string().min(5, { message: "Адрес должен содержать не менее 5 символов" }),
   bio: z.string().optional(),
-  agreeToTerms: z.boolean().refine((val) => val === true, {
-    message: "Необходимо согласиться с условиями",
-  }),
-})
+  password: z.string().min(6, { message: "Пароль должен содержать не менее 6 символов" }), // Добавлено
+  agreeToTerms: z.boolean().refine((val) => val === true, { message: "Необходимо согласиться с условиями" }),
+});
 
 export function TeacherForm() {
-  const router = useRouter()
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
-  const [activeTab, setActiveTab] = useState("personal")
-  const [progress, setProgress] = useState(33)
+  const router = useRouter();
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState("personal");
+  const [progress, setProgress] = useState(33);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -89,78 +63,134 @@ export function TeacherForm() {
       address: "",
       bio: "",
       subjects: [],
+      password: "", // Добавлено
       agreeToTerms: false,
     },
-  })
+  });
 
   const handleTabChange = (value: string) => {
-    // Обновляем прогресс в зависимости от активной вкладки
-    if (value === "personal") setProgress(33)
-    if (value === "professional") setProgress(66)
-    if (value === "additional") setProgress(100)
+    if (value === "personal") setProgress(33);
+    if (value === "professional") setProgress(66);
+    if (value === "additional") setProgress(100);
 
-    // Проверяем валидность текущей вкладки перед переключением
     if (value === "professional" && activeTab === "personal") {
-      const personalFields = ["firstName", "lastName", "email", "phone", "dateOfBirth", "address"]
-      const isValid = personalFields.every((field) => {
-        const fieldState = form.getFieldState(field as any)
-        return !fieldState.invalid
-      })
-
+      const personalFields = ["firstName", "lastName", "email", "phone", "dateOfBirth", "address"];
+      const isValid = personalFields.every((field) => !form.getFieldState(field as any).invalid);
       if (!isValid) {
-        form.trigger(["firstName", "lastName", "email", "phone", "dateOfBirth", "address"])
-        return
+        form.trigger(personalFields as any);
+        return;
       }
     }
 
     if (value === "additional" && activeTab === "professional") {
-      const professionalFields = ["department", "position", "subjects", "education", "experience"]
-      const isValid = professionalFields.every((field) => {
-        const fieldState = form.getFieldState(field as any)
-        return !fieldState.invalid
-      })
-
+      const professionalFields = ["department", "position", "subjects", "education", "experience"];
+      const isValid = professionalFields.every((field) => !form.getFieldState(field as any).invalid);
       if (!isValid) {
-        form.trigger(["department", "position", "subjects", "education", "experience"])
-        return
+        form.trigger(professionalFields as any);
+        return;
       }
     }
 
-    setActiveTab(value)
-  }
+    setActiveTab(value);
+  };
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true)
-
-    // Симуляция отправки формы
-    setTimeout(() => {
-      console.log(values)
-      setIsSubmitting(false)
-      setIsSuccess(true)
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log("Form submitted with values:", values); // Логируем успешную отправку
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Please log in");
+  
+      const response = await fetch("http://localhost:5000/api/teachers", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create teacher: ${errorText}`);
+      }
+  
+      setIsSuccess(true);
       toast({
         title: "Преподаватель успешно добавлен",
         description: "Информация о преподавателе сохранена в системе",
-      })
-
-      // Перенаправление через 2 секунды
+      });
+  
       setTimeout(() => {
-        router.push("/dashboard/teachers")
-      }, 2000)
-    }, 2000)
-  }
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+        router.push("/dashboard/teachers");
+      }, 2000);
+    } catch (error: any) {
+      console.error("Error in onSubmit:", error);
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }
+  
+  // В CardFooter, кнопка "Сохранить":
+  {activeTab === "additional" ? (
+    <Button
+      type="submit"
+      className="bg-blue-600 hover:bg-blue-700"
+      disabled={isSubmitting}
+      onClick={() => {
+        console.log("Submit button clicked"); // Логируем клик
+        form.trigger().then((isValid) => {
+          console.log("Form is valid:", isValid); // Логируем результат валидации
+          if (!isValid) {
+            console.log("Form errors:", form.formState.errors); // Логируем ошибки
+          }
+        });
+      }}
+    >
+      {isSubmitting ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Сохранение...
+        </>
+      ) : (
+        <>
+          <Save className="mr-2 h-4 w-4" />
+          Сохранить преподавателя
+        </>
+      )}
+    </Button>
+  ) : (
+    <Button
+      type="button"
+      className="bg-blue-600 hover:bg-blue-700"
+      onClick={() => {
+        if (activeTab === "personal") {
+          form.trigger(["firstName", "lastName", "email", "phone", "dateOfBirth", "address"]).then((isValid) => {
+            if (isValid) handleTabChange("professional");
+          });
+        }
+        if (activeTab === "professional") {
+          form.trigger(["department", "position", "subjects", "education", "experience"]).then((isValid) => {
+            if (isValid) handleTabChange("additional");
+          });
+        }
+      }}
+    >
+      Далее
+    </Button>
+  )}
 
-  // Если форма успешно отправлена, показываем сообщение об успехе
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPhotoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
   if (isSuccess) {
     return (
       <Card className="w-full max-w-2xl mx-auto">
@@ -175,11 +205,11 @@ export function TeacherForm() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setIsSuccess(false)
-                  form.reset()
-                  setPhotoPreview(null)
-                  setActiveTab("personal")
-                  setProgress(33)
+                  setIsSuccess(false);
+                  form.reset();
+                  setPhotoPreview(null);
+                  setActiveTab("personal");
+                  setProgress(33);
                 }}
               >
                 Добавить еще одного преподавателя
@@ -191,7 +221,7 @@ export function TeacherForm() {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -216,7 +246,6 @@ export function TeacherForm() {
         <CardHeader className="pb-4 border-b">
           <CardTitle>Добавление нового преподавателя</CardTitle>
           <CardDescription>Заполните информацию о преподавателе для добавления в систему</CardDescription>
-
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2 text-sm">
               <span>Прогресс заполнения</span>
@@ -244,7 +273,7 @@ export function TeacherForm() {
                       <div className="relative h-32 w-32 overflow-hidden rounded-full border-2 border-dashed border-gray-300 bg-white p-1">
                         {photoPreview ? (
                           <img
-                            src={photoPreview || "/placeholder.svg"}
+                            src={photoPreview}
                             alt="Предпросмотр фото преподавателя"
                             className="h-full w-full rounded-full object-cover"
                           />
@@ -277,7 +306,21 @@ export function TeacherForm() {
                       </div>
                     </div>
                   </div>
-
+                  <div className="space-y-4">
+                  <FormField
+    control={form.control}
+    name="password"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Пароль</FormLabel>
+        <FormControl>
+          <Input type="password" placeholder="Введите пароль" {...field} />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
+                  </div>
                   <div className="space-y-4">
                     <FormField
                       control={form.control}
@@ -333,16 +376,9 @@ export function TeacherForm() {
                             <FormControl>
                               <Button
                                 variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground",
-                                )}
+                                className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                               >
-                                {field.value ? (
-                                  format(field.value, "dd MMMM yyyy", { locale: ru })
-                                ) : (
-                                  <span>Выберите дату</span>
-                                )}
+                                {field.value ? format(field.value, "dd MMMM yyyy", { locale: ru }) : <span>Выберите дату</span>}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                               </Button>
                             </FormControl>
@@ -482,23 +518,21 @@ export function TeacherForm() {
                               key={subject}
                               control={form.control}
                               name="subjects"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem key={subject} className="flex flex-row items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(subject)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...field.value, subject])
-                                            : field.onChange(field.value?.filter((value) => value !== subject))
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal">{subject}</FormLabel>
-                                  </FormItem>
-                                )
-                              }}
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(subject)}
+                                      onCheckedChange={(checked) =>
+                                        checked
+                                          ? field.onChange([...field.value, subject])
+                                          : field.onChange(field.value?.filter((value) => value !== subject))
+                                      }
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">{subject}</FormLabel>
+                                </FormItem>
+                              )}
                             />
                           ))}
                         </div>
@@ -516,11 +550,7 @@ export function TeacherForm() {
                       <FormItem>
                         <FormLabel>Образование</FormLabel>
                         <FormControl>
-                          <Textarea
-                            placeholder="Информация об образовании преподавателя"
-                            className="min-h-[100px]"
-                            {...field}
-                          />
+                          <Textarea placeholder="Информация об образовании преподавателя" className="min-h-[100px]" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -533,11 +563,7 @@ export function TeacherForm() {
                       <FormItem>
                         <FormLabel>Опыт работы</FormLabel>
                         <FormControl>
-                          <Textarea
-                            placeholder="Информация об опыте работы преподавателя"
-                            className="min-h-[100px]"
-                            {...field}
-                          />
+                          <Textarea placeholder="Информация об опыте работы преподавателя" className="min-h-[100px]" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -554,11 +580,7 @@ export function TeacherForm() {
                     <FormItem>
                       <FormLabel>Биография</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="Дополнительная информация о преподавателе"
-                          className="min-h-[150px]"
-                          {...field}
-                        />
+                        <Textarea placeholder="Дополнительная информация о преподавателе" className="min-h-[150px]" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -581,8 +603,7 @@ export function TeacherForm() {
                         <div className="space-y-1 leading-none">
                           <FormLabel>Я согласен с условиями обработки персональных данных</FormLabel>
                           <FormDescription>
-                            Нажимая на кнопку, вы соглашаетесь с политикой конфиденциальности и обработкой персональных
-                            данных
+                            Нажимая на кнопку, вы соглашаетесь с политикой конфиденциальности и обработкой персональных данных
                           </FormDescription>
                         </div>
                         <FormMessage />
@@ -594,67 +615,62 @@ export function TeacherForm() {
             </Tabs>
 
             <CardFooter className="flex justify-between border-t p-6">
-              <div className="flex justify-between w-full">
-                {activeTab === "personal" ? (
-                  <Button variant="outline" onClick={() => router.push("/dashboard/teachers")}>
-                    Отмена
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      if (activeTab === "professional") handleTabChange("personal")
-                      if (activeTab === "additional") handleTabChange("professional")
-                    }}
-                  >
-                    Назад
-                  </Button>
-                )}
+  <div className="flex justify-between w-full">
+    {activeTab === "personal" ? (
+      <Button variant="outline" onClick={() => router.push("/dashboard/teachers")}>
+        Отмена
+      </Button>
+    ) : (
+      <Button
+        variant="outline"
+        onClick={() => {
+          if (activeTab === "professional") handleTabChange("personal");
+          if (activeTab === "additional") handleTabChange("professional");
+        }}
+      >
+        Назад
+      </Button>
+    )}
 
-                {activeTab === "additional" ? (
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Сохранение...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Сохранить преподавателя
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => {
-                      if (activeTab === "personal") {
-                        form
-                          .trigger(["firstName", "lastName", "email", "phone", "dateOfBirth", "address"])
-                          .then((isValid) => {
-                            if (isValid) handleTabChange("professional")
-                          })
-                      }
-                      if (activeTab === "professional") {
-                        form
-                          .trigger(["department", "position", "subjects", "education", "experience"])
-                          .then((isValid) => {
-                            if (isValid) handleTabChange("additional")
-                          })
-                      }
-                    }}
-                  >
-                    Далее
-                  </Button>
-                )}
-              </div>
-            </CardFooter>
+    {activeTab === "additional" ? (
+      <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Сохранение...
+          </>
+        ) : (
+          <>
+            <Save className="mr-2 h-4 w-4" />
+            Сохранить преподавателя
+          </>
+        )}
+      </Button>
+    ) : (
+      <Button
+        type="button"
+        className="bg-blue-600 hover:bg-blue-700"
+        onClick={() => {
+          if (activeTab === "personal") {
+            form.trigger(["firstName", "lastName", "email", "phone", "dateOfBirth", "address", "password"]).then((isValid) => {
+              if (isValid) handleTabChange("professional");
+            });
+          }
+          if (activeTab === "professional") {
+            form.trigger(["department", "position", "subjects", "education", "experience"]).then((isValid) => {
+              if (isValid) handleTabChange("additional");
+            });
+          }
+        }}
+      >
+        Далее
+      </Button>
+    )}
+  </div>
+</CardFooter>
           </form>
         </Form>
       </Card>
     </div>
-  )
+  );
 }
-

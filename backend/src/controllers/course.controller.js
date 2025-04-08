@@ -3,39 +3,16 @@ const prisma = new PrismaClient();
 
 class CourseController {
   async createCourse(req, res) {
-    const { name, description, teacherId, groupIds, schedule } = req.body;
-
     if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Only ADMIN can create courses' });
+      return res.status(403).json({ message: 'Only ADMIN can create course numbers' });
     }
-
-    try {
-      const course = await prisma.course.create({
-        data: {
-          name,
-          description,
-          teacherId: teacherId ? Number(teacherId) : null,
-          groups: groupIds ? { connect: groupIds.map(id => ({ id: Number(id) })) } : undefined,
-          schedule,
-        },
-      });
-      res.status(201).json(course);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-  async addCourseNumber(req,res) {
     const { name, description } = req.body;
-    if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Only ADMIN can add course numbers' });
+    if (!name) {
+      return res.status(400).json({ message: 'Name is required' });
     }
-
     try {
       const courseNumber = await prisma.courseNumber.create({
-        data: {
-          name,
-          description,
-        },
+        data: { name, description },
       });
       res.status(201).json(courseNumber);
     } catch (error) {
@@ -44,40 +21,42 @@ class CourseController {
   }
 
   async getCourses(req, res) {
-    const courses = await prisma.course.findMany({
-      include: { teacher: { include: { user: true } }, groups: true },
-    });
-    res.json(courses);
+    try {
+      const courseNumbers = await prisma.courseNumber.findMany();
+      res.json(courseNumbers);
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
   }
 
   async getCourse(req, res) {
-    const course = await prisma.course.findUnique({
-      where: { id: Number(req.params.id) },
-      include: { teacher: { include: { user: true } }, groups: true },
-    });
-    if (!course) return res.status(404).json({ message: 'Course not found' });
-    res.json(course);
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid course ID' });
+    }
+    try {
+      const courseNumber = await prisma.courseNumber.findUnique({
+        where: { id },
+      });
+      if (!courseNumber) return res.status(404).json({ message: 'Course number not found' });
+      res.json(courseNumber);
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
   }
 
   async updateCourse(req, res) {
-    const { name, description, teacherId, groupIds, schedule } = req.body;
-
     if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Only ADMIN can update courses' });
+      return res.status(403).json({ message: 'Only ADMIN can update course numbers' });
     }
-
+    const { name, description } = req.body;
+    const id = Number(req.params.id);
     try {
-      const course = await prisma.course.update({
-        where: { id: Number(req.params.id) },
-        data: {
-          name,
-          description,
-          teacherId: teacherId ? Number(teacherId) : null,
-          groups: groupIds ? { set: groupIds.map(id => ({ id: Number(id) })) } : undefined,
-          schedule,
-        },
+      const courseNumber = await prisma.courseNumber.update({
+        where: { id },
+        data: { name, description },
       });
-      res.json(course);
+      res.json(courseNumber);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
@@ -85,40 +64,14 @@ class CourseController {
 
   async deleteCourse(req, res) {
     if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Only ADMIN can delete courses' });
+      return res.status(403).json({ message: 'Only ADMIN can delete course numbers' });
     }
-
+    const id = Number(req.params.id);
     try {
-      await prisma.course.delete({
-        where: { id: Number(req.params.id) },
+      await prisma.courseNumber.delete({
+        where: { id },
       });
       res.status(204).send();
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  async getCoursePerformance(req, res) {
-    const performance = await prisma.performance.findMany({
-      where: { courseId: Number(req.params.id) },
-      include: { student: true },
-    });
-    res.json(performance);
-  }
-
-  async addGroupToCourse(req, res) {
-    const { groupId } = req.body;
-
-    if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Only ADMIN can add groups to courses' });
-    }
-
-    try {
-      const course = await prisma.course.update({
-        where: { id: Number(req.params.id) },
-        data: { groups: { connect: { id: Number(groupId) } } },
-      });
-      res.json(course);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

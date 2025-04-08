@@ -264,7 +264,7 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
     },
     {
       accessorKey: "studentId",
-      header: "ID студента",
+      header: "ИИН студента",
       cell: ({ row }) => <div className="font-mono text-sm">{row.original.iin}</div>,
     },
     {
