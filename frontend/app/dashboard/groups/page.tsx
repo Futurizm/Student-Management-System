@@ -3,9 +3,11 @@
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HOST } from "@/lib/constants";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx"; // Import xlsx library
+import { toast } from "@/components/ui/use-toast";
 
 interface Group {
   id: number;
@@ -27,6 +29,7 @@ export default function GroupsPage() {
   const [courseNumbers, setCourseNumbers] = useState<CourseNumber[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [groupToDelete, setGroupToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     fetchGroupsData();
@@ -70,6 +73,31 @@ export default function GroupsPage() {
       setError(err.message || "Failed to load courses");
     }
   };
+
+
+  const deleteGroup = async (groupId: number) => {
+    try {
+      const response = await fetch(`${HOST}/groups/${groupId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        }
+      })
+
+      if (!response.ok) throw new Error(`Не получилось удалить группу: ${response.statusText}`);
+      
+
+      setGroups((prevGroups) => prevGroups.filter((group) => group.id !== groupId));
+      toast({
+        title: "Группа успешно удалена",
+        variant: "success",
+      })
+    } catch (error) {
+      setError("Не удалось удалить группу");
+      console.error("Ошибка при удалении группы", error)
+    }
+  }
 
   // Function to export all groups to Excel
   const exportAllToExcel = () => {
@@ -153,6 +181,9 @@ return (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex space-x-2">
                         <Link href={`/dashboard/groups/${group.id}`}><Button variant="ghost">Просмотр</Button></Link>
                         <Button variant="ghost" onClick={() => exportSingleGroupToExcel(group)}>Экспорт</Button>
+                        <Button variant="destructive" onClick={() => deleteGroup(group.id)}>
+                          Удалить
+                        </Button>
                       </td>
                     </tr>
                   ))}

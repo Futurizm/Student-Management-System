@@ -50,6 +50,19 @@ const formSchema = z.object({
   file: z.any().optional(),
 })
 
+// Тип для данных групп с бэкенда
+type Group = {
+  id: number;
+  name: string;
+  specialty: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+  schedule?: string;
+  teacherId?: number;
+  courseNumberId: number;
+};
+
 // Добавляем тип пропсов
 interface AddStudentDialogProps {
   onStudentAdded?: () => void; // Callback для обновления списка
@@ -64,6 +77,8 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
   const [activeTab, setActiveTab] = useState("personal")
   const [open, setOpen] = useState(false)
   const [progress, setProgress] = useState(33)
+  const [groups, setGroups] = useState<Group[]>([]) // Состояние для групп
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false) // Состояние загрузки групп
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -88,6 +103,39 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
     },
   })
 
+  // Функция для получения групп с бэкенда
+  const fetchGroups = async () => {
+    setIsLoadingGroups(true)
+    try {
+      const response = await fetch("http://localhost:5000/api/groups", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`, // Добавляем токен, если требуется
+        },
+      })
+      if (!response.ok) throw new Error("Ошибка при загрузке групп")
+      const data: Group[] = await response.json()
+      setGroups(data)
+    } catch (error) {
+      console.error("Ошибка при получении групп:", error)
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список групп",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingGroups(false)
+    }
+  }
+
+  // Загружаем группы при открытии диалога
+  useEffect(() => {
+    if (open) {
+      fetchGroups()
+    }
+  }, [open])
+
   useEffect(() => {
     if (activeTab === "personal") setProgress(33)
     if (activeTab === "education") setProgress(66)
@@ -110,7 +158,9 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
     formData.append("direction", values.direction)
     formData.append("groupId", values.groupId || "") // Пустая строка, если undefined
     formData.append("phoneNumber", values.phoneNumber)
-    formData.append("email", values.email)
+    formData.append("emergencyContact", values.emergencyContact)
+    formData.append("email", values.email)  
+    formData.append("notes", values.notes || "")
     if (photoFile) formData.append("file", photoFile)
 
     try {
@@ -146,7 +196,7 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
       })
 
       if (onStudentAdded) {
-        onStudentAdded();
+        onStudentAdded()
       }
 
       setTimeout(() => {
@@ -277,6 +327,7 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                     </TabsList>
 
                     <TabsContent value="personal" className="space-y-6 mt-0">
+                      {/* Личные данные остаются без изменений */}
                       <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-4">
                           <div className="flex flex-col items-center justify-center gap-4 bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300">
@@ -406,7 +457,7 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                           name="gender"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Пол</FormLabel>
+                              <FormLabel>Пол</FormLabel>  
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
@@ -414,8 +465,8 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="male">Мужской</SelectItem>
-                                  <SelectItem value="female">Женский</SelectItem>
+                                  <SelectItem value="Мужской">Мужской</SelectItem>
+                                  <SelectItem value="Женский">Женский</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -533,15 +584,26 @@ export function AddStudentDialog({ onStudentAdded }: AddStudentDialogProps) {
                               <FormLabel>Группа</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Выберите группу" />
+                                  <SelectTrigger disabled={isLoadingGroups}>
+                                    <SelectValue placeholder={isLoadingGroups ? "Загрузка групп..." : "Выберите группу"} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="1">Группа A-101</SelectItem>
-                                  <SelectItem value="2">Группа Б-202</SelectItem>
-                                  <SelectItem value="3">Группа В-303</SelectItem>
-                                  <SelectItem value="4">Группа Г-404</SelectItem>
+                                  {isLoadingGroups ? (
+                                    <SelectItem value="loading" disabled>
+                                      Загрузка...
+                                    </SelectItem>
+                                  ) : groups.length > 0 ? (
+                                    groups.map((group) => (
+                                      <SelectItem key={group.id} value={String(group.id)}>
+                                        {group.name} ({group.specialty})
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    <SelectItem value="no-groups" disabled>
+                                      Группы не найдены
+                                    </SelectItem>
+                                  )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />

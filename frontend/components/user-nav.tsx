@@ -17,7 +17,7 @@ export function UserNav() {
   const { userRole, userEmail, logout } = useAuth()
 
   const userInfo = {
-    name: userRole === "admin" ? "Администратор" : userRole === "teacher" ? "Преподаватель" : "Родитель",
+    name: userRole === "ADMIN" ? "Администратор" : userRole === "TEACHER" ? "Преподаватель" : "Инспектор",
     email: userEmail || `${userRole}@example.com`,
     imageUrl: "/placeholder.svg?height=32&width=32",
   }

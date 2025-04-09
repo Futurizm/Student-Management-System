@@ -59,9 +59,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HOST, HOST_NO_API } from "@/lib/constants"
 import * as XLSX from "xlsx"
 
+export type Group = {
+  id: number
+  name: string
+}
+
 export type Student = {
   id: number
-  iin: number
+  iin: string
   firstName: string
   lastName: string
   middleName: string
@@ -72,7 +77,13 @@ export type Student = {
   direction: string
   phoneNumber?: string
   profilePicture?: string
+  notes?: string
   gender?: string
+  groupdId?: string
+  adress?: string
+  emergencyContact?: string
+  birthDate?: string
+  group?: Group 
 }
 
 interface StudentTableProps {
@@ -88,6 +99,7 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>(filterStatus || "all")
@@ -180,8 +192,8 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
   const handleExport = () => {
     const selectedRows = table.getSelectedRowModel().rows
     const dataToExport = selectedRows.length > 0
-      ? selectedRows.map(row => row.original) // Экспорт только выбранных
-      : filteredData // Если ничего не выбрано, экспорт отключён, так что это не сработает
+      ? selectedRows.map(row => row.original)
+      : filteredData
 
     const exportData = dataToExport.map(student => ({
       "ID": student.iin,
@@ -351,7 +363,6 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
     },
   })
 
-  // Функции для управления модальными окнами и удалением остаются без изменений
   const handleViewStudent = (student: Student) => {
     setSelectedStudent(student)
     setViewModalOpen(true)
@@ -381,7 +392,8 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
         setAllData(allData.filter((student) => student.id !== selectedStudent.id))
         toast({
           title: "Студент удалён",
-          description: `Студент ${selectedStudent.firstName} был успешно удалён`,
+          description: `Студент ${selectedStudent.firstName} ${selectedStudent.lastName} был успешно удалён`,
+          variant: "success",
         })
       } catch (error) {
         console.error("Ошибка при удалении:", error)
@@ -392,7 +404,55 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
         })
       }
       setDeleteDialogOpen(false)
+      setSelectedStudent(null)
     }
+  }
+
+  const handleDeleteMultipleStudents = () => {
+    const selectedRows = table.getSelectedRowModel().rows
+    if (selectedRows.length > 0) {
+      setDeleteMultipleDialogOpen(true)
+    }
+  }
+
+  const confirmDeleteMultipleStudents = async () => {
+    const selectedRows = table.getSelectedRowModel().rows
+    const selectedIds = selectedRows.map(row => row.original.id)
+
+    try {
+      // Отправляем отдельные запросы для каждого студента
+      const deletePromises = selectedIds.map(id =>
+        fetch(`${HOST}/students/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }).then(response => {
+          if (!response.ok) throw new Error(`Ошибка удаления студента с ID ${id}`)
+          return id
+        })
+      )
+
+      const deletedIds = await Promise.all(deletePromises)
+
+      setFilteredData(filteredData.filter(student => !deletedIds.includes(student.id)))
+      setAllData(allData.filter(student => !deletedIds.includes(student.id)))
+      setRowSelection({}) // Сбрасываем выбор
+
+      toast({
+        title: "Студенты удалены",
+        description: `Удалено ${deletedIds.length} студентов`,
+        variant: "success",
+      })
+    } catch (error) {
+      console.error("Ошибка при массовом удалении:", error)
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить выбранных студентов",
+        variant: "destructive",
+      })
+    }
+    setDeleteMultipleDialogOpen(false)
   }
 
   const handleSaveStudent = (updatedStudent: Student) => {
@@ -422,7 +482,7 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
               variant="outline"
               size="sm"
               onClick={handleExport}
-              disabled={table.getSelectedRowModel().rows.length === 0} // Отключение, если ничего не выбрано
+              disabled={table.getSelectedRowModel().rows.length === 0}
               className="gap-1"
             >
               <Download className="h-4 w-4" />
@@ -538,7 +598,12 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
                 <span>
                   {table.getFilteredSelectedRowModel().rows.length} из {table.getFilteredRowModel().rows.length} строк выбрано
                 </span>
-                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteMultipleStudents}
+                  className="h-8 gap-1 text-xs"
+                >
                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
                   Удалить выбранные
                 </Button>
@@ -619,12 +684,29 @@ export function StudentTable({ filterStatus }: StudentTableProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
             <AlertDialogDescription>
-              Это действие нельзя отменить. Студент {selectedStudent?.firstName} будет удалён из системы.
+              Это действие нельзя отменить. Студент {selectedStudent?.firstName} {selectedStudent?.lastName} будет удалён из системы.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteStudent} className="bg-red-600 hover:bg-red-700">
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteMultipleDialogOpen} onOpenChange={setDeleteMultipleDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить выбранных студентов?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы собираетесь удалить {table.getSelectedRowModel().rows.length} студентов. Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteMultipleStudents} className="bg-red-600 hover:bg-red-700">
               Удалить
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -17,175 +16,212 @@ import { Progress } from "@/components/ui/progress"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { format } from "date-fns"
-import { ru } from "date-fns/locale"
-import { CalendarIcon, Loader2, Upload, Save, User } from "lucide-react"
+import { Loader2, Upload, Save, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar } from "@/components/ui/calendar"
 import { toast } from "@/components/ui/use-toast"
+import { Student } from "./student-table"
+import { HOST_NO_API } from "@/lib/constants"
 
+// Тип для данных групп с бэкенда
+type Group = {
+  id: number;
+  name: string;
+  specialty: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+  schedule?: string;
+  teacherId?: number;
+  courseNumberId: number;
+};
+
+// Схема валидации
 const formSchema = z.object({
-  firstName: z.string().min(2, {
-    message: "Имя должно содержать не менее 2 символов",
-  }),
-  lastName: z.string().min(2, {
-    message: "Фамилия должна содержать не менее 2 символов",
-  }),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   middleName: z.string().optional(),
-  email: z.string().email({
-    message: "Введите корректный email адрес",
-  }),
-  studentId: z.string().min(5, {
-    message: "ID студента должен содержать не менее 5 символов",
-  }),
-  dateOfBirth: z.date({
-    required_error: "Дата рождения обязательна",
-  }),
-  gender: z.string({
-    required_error: "Выберите пол",
-  }),
-  nationality: z.string({
-    required_error: "Выберите гражданство",
-  }),
-  course: z.string({
-    required_error: "Выберите направление обучения",
-  }),
-  group: z.string({
-    required_error: "Выберите группу",
-  }),
-  address: z.string().min(5, {
-    message: "Адрес должен содержать не менее 5 символов",
-  }),
-  phoneNumber: z.string().min(5, {
-    message: "Номер телефона должен содержать не менее 5 символов",
-  }),
-  emergencyContact: z.string().min(5, {
-    message: "Контакт для экстренной связи должен содержать не менее 5 символов",
-  }),
+  email: z.string().optional(),
+  iin: z.string().optional(),
+  birthDate: z.date().optional(),
+  gender: z.string().optional(),
+  citizenship: z.string().optional(),
+  groupId: z.string().optional(),
+  direction: z.string().optional(),
+  adress: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  emergencyContact: z.string().optional(),
   notes: z.string().optional(),
-  status: z.string(),
+  status: z.string().optional(),
 })
 
 interface EditStudentModalProps {
-  student: any
+  student: Student
   isOpen: boolean
   onClose: () => void
   onSave: (data: any) => void
 }
 
 export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStudentModalProps) {
-  const [photoPreview, setPhotoPreview] = useState<string | null>(student?.imageUrl || null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(student?.profilePicture || null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("personal")
   const [progress, setProgress] = useState(33)
+  const [groups, setGroups] = useState<Group[]>([]) // Состояние для групп
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false) // Состояние загрузки групп
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: student?.name?.split(" ")[1] || "",
-      lastName: student?.name?.split(" ")[0] || "",
-      middleName: "",
+      firstName: student?.firstName || "",
+      lastName: student?.lastName || "",
+      middleName: student?.middleName || "",
       email: student?.email || "",
-      studentId: student?.studentId || "",
-      dateOfBirth: new Date("2000-01-01"),
-      gender: student?.gender || "male",
-      nationality: student?.nationality || "",
-      course: student?.course || "",
-      group: "group-a",
-      address: "г. Москва, ул. Примерная, д. 123, кв. 45",
-      phoneNumber: student?.phoneNumber || "+7 (999) 123-4567",
-      emergencyContact: "Иванов Иван Иванович (отец): +7 (999) 987-6543",
+      iin: String(student?.iin) || "",
+      birthDate: student?.birthDate ? new Date(student.birthDate) : undefined,
+      gender: student?.gender,
+      citizenship: student?.citizenship || "",
+      direction: student?.direction || "",
+      adress: student?.adress || "",
+      phoneNumber: student?.phoneNumber || "",
+      emergencyContact: student?.emergencyContact || "",
       notes: student?.notes || "",
-      status: student?.status || "Active",
+      status: student?.status || "",
+      groupId: student?.group?.id ? String(student.group.id) : undefined, // Используем student.group.id
     },
   })
 
+  // Функция для получения групп с бэкенда
+  const fetchGroups = async () => {
+    setIsLoadingGroups(true)
+    try {
+      const response = await fetch("http://localhost:5000/api/groups", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      if (!response.ok) throw new Error("Ошибка при загрузке групп")
+      const data: Group[] = await response.json()
+      setGroups(data)
+      console.log(groups)
+    } catch (error) {
+      console.error("Ошибка при получении групп:", error)
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список групп",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingGroups(false)
+    }
+  }
+
+  // Загружаем группы при открытии модального окна
+  useEffect(() => {
+    if (isOpen) {
+      fetchGroups()
+    }
+  }, [isOpen])
+
+  // Сброс формы при изменении student
+  useEffect(() => {
+    form.reset({
+      firstName: student?.firstName || "",
+      lastName: student?.lastName || "",
+      middleName: student?.middleName || "",
+      email: student?.email || "",
+      iin: String(student?.iin) || "",
+      birthDate: student?.birthDate ? new Date(student.birthDate) : undefined,
+      gender: student?.gender || "male",
+      citizenship: student?.citizenship || "Россия",
+      direction: student?.direction || "",
+      adress: student?.adress || "г. Москва, ул. Примерная, д. 123, кв. 45",
+      phoneNumber: student?.phoneNumber || "+7 (999) 123-4567",
+      emergencyContact: student?.emergencyContact || "",
+      notes: student?.notes || "",
+      status: student?.status || "ACTIVE",
+      groupId: student?.group?.id ? String(student.group.id) : undefined, // Используем student.group.id
+    })
+
+  }, [student, form])
+
   const handleTabChange = (value: string) => {
-    // Обновляем прогресс в зависимости от активной вкладки
     if (value === "personal") setProgress(33)
     if (value === "education") setProgress(66)
     if (value === "additional") setProgress(100)
 
-    // Проверяем валидность текущей вкладки перед переключением
     if (value === "education" && activeTab === "personal") {
-      const personalFields = [
+      form.trigger([
         "firstName",
         "lastName",
         "email",
-        "studentId",
-        "dateOfBirth",
+        "iin",
+        "birthDate",
         "gender",
-        "nationality",
+        "citizenship",
         "phoneNumber",
-        "address",
-      ]
-      const isValid = personalFields.every((field) => {
-        const fieldState = form.getFieldState(field as any)
-        return !fieldState.invalid
+        "adress",
+      ]).then((isValid) => {
+        if (isValid) setActiveTab(value)
       })
-
-      if (!isValid) {
-        form.trigger([
-          "firstName",
-          "lastName",
-          "email",
-          "studentId",
-          "dateOfBirth",
-          "gender",
-          "nationality",
-          "phoneNumber",
-          "address",
-        ])
-        return
-      }
+      return
     }
 
     if (value === "additional" && activeTab === "education") {
-      const educationFields = ["course", "group"]
-      const isValid = educationFields.every((field) => {
-        const fieldState = form.getFieldState(field as any)
-        return !fieldState.invalid
+      form.trigger(["direction", "groupId"]).then((isValid) => {
+        if (isValid) setActiveTab(value)
       })
-
-      if (!isValid) {
-        form.trigger(["course", "group"])
-        return
-      }
+      return
     }
 
     setActiveTab(value)
   }
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
 
-    // Формируем полное имя из фамилии и имени
-    const fullName = `${values.lastName} ${values.firstName}`
-
-    // Создаем обновленный объект студента
     const updatedStudent = {
       ...student,
-      name: fullName,
+      firstName: values.firstName,
+      lastName: values.lastName,
+      middleName: values.middleName,
       email: values.email,
-      studentId: values.studentId,
-      course: values.course,
-      nationality: values.nationality,
-      status: values.status,
+      iin: values.iin,
+      birthDate: values.birthDate ? values.birthDate.toISOString() : student.birthDate,
       gender: values.gender,
+      citizenship: values.citizenship,
+      direction: values.direction,
+      groupId: values.groupId ? Number(values.groupId) : null,
+      adress: values.adress,
       phoneNumber: values.phoneNumber,
-      address: values.address,
       emergencyContact: values.emergencyContact,
       notes: values.notes,
-      imageUrl: photoPreview || student?.imageUrl,
+      status: values.status,
+      profilePicture: photoPreview || student?.profilePicture,
     }
 
-    // Симуляция отправки формы
-    setTimeout(() => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/students/${student.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(updatedStudent),
+      })
+
+      if (!response.ok) {
+        throw new Error("Ошибка при обновлении студента")
+      }
+
+      const data = await response.json()
+      console.log("Успешно обновлено:", data)
+
       setIsSubmitting(false)
       onSave(updatedStudent)
       toast({
@@ -193,7 +229,15 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
         description: "Информация о студенте сохранена в системе",
       })
       onClose()
-    }, 1000)
+    } catch (error) {
+      setIsSubmitting(false)
+      console.error("Ошибка:", error)
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить студента. Попробуйте снова.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,8 +258,7 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
       <DialogContent className="sm:max-w-[900px] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>Редактирование студента</DialogTitle>
-          <DialogDescription>Измените информацию о студенте {student.name}</DialogDescription>
-
+          <DialogDescription>Измените информацию о студенте {student.firstName}</DialogDescription>
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2 text-sm">
               <span>Прогресс заполнения</span>
@@ -242,8 +285,8 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                         <div className="relative h-32 w-32 overflow-hidden rounded-full border-2 border-dashed border-gray-300 bg-white p-1">
                           {photoPreview ? (
                             <img
-                              src={photoPreview || "/placeholder.svg"}
-                              alt="Предпросмотр фото студента"
+                              src={`${HOST_NO_API}/${student.profilePicture}` || photoPreview}
+                              alt={student.firstName.charAt(0)}
                               className="h-full w-full rounded-full object-cover"
                             />
                           ) : (
@@ -277,12 +320,12 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
 
                       <FormField
                         control={form.control}
-                        name="studentId"
+                        name="iin"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>ID студента</FormLabel>
+                            <FormLabel>ИИН студента</FormLabel>
                             <FormControl>
-                              <Input placeholder="S12345" {...field} />
+                              <Input placeholder="123456789012" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -295,15 +338,15 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Статус</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Выберите статус" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="Active">Активен</SelectItem>
-                                <SelectItem value="Inactive">Неактивен</SelectItem>
+                                <SelectItem value="ACTIVE">Активен</SelectItem>
+                                <SelectItem value="INACTIVE">Неактивен</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -358,40 +401,19 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                   <div className="grid gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="dateOfBirth"
+                      name="birthDate"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Дата рождения</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground",
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "dd MMMM yyyy", { locale: ru })
-                                  ) : (
-                                    <span>Выберите дату</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                                initialFocus
-                                locale={ru}
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              value={field.value ? field.value.toISOString().split("T")[0] : ""}
+                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                              max={new Date().toISOString().split("T")[0]}
+                              min="1900-01-01"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -402,7 +424,7 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Пол</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Выберите пол" />
@@ -445,11 +467,11 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                     />
                     <FormField
                       control={form.control}
-                      name="nationality"
+                      name="citizenship"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Гражданство</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Выберите гражданство" />
@@ -469,7 +491,7 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                     />
                     <FormField
                       control={form.control}
-                      name="address"
+                      name="adress"
                       render={({ field }) => (
                         <FormItem className="md:col-span-2">
                           <FormLabel>Адрес</FormLabel>
@@ -487,11 +509,11 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                   <div className="grid gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="course"
+                      name="direction"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Направление обучения</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Выберите направление" />
@@ -499,114 +521,15 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="Информатика">Информатика</SelectItem>
-                              <SelectItem value="Бизнес-администрирование">Бизнес-администрирование</SelectItem>
-                              <SelectItem value="Графический дизайн">Графический дизайн</SelectItem>
-                              <SelectItem value="Психология">Психология</SelectItem>
-                              <SelectItem value="Инженерия">Инженерия</SelectItem>
-                              <SelectItem value="Медицина">Медицина</SelectItem>
-                              <SelectItem value="Юриспруденция">Юриспруденция</SelectItem>
+                              <SelectItem value="Менеджмент">Менеджмент</SelectItem>
+                              <SelectItem value="Электрики">Электрики</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="group"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Группа</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Выберите группу" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="group-a">Группа A-101</SelectItem>
-                              <SelectItem value="group-b">Группа Б-202</SelectItem>
-                              <SelectItem value="group-c">Группа В-303</SelectItem>
-                              <SelectItem value="group-d">Группа Г-404</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="space-y-2">
-                      <FormLabel>Год поступления</FormLabel>
-                      <Select defaultValue="2023">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите год" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="2023">2023</SelectItem>
-                          <SelectItem value="2022">2022</SelectItem>
-                          <SelectItem value="2021">2021</SelectItem>
-                          <SelectItem value="2020">2020</SelectItem>
-                          <SelectItem value="2019">2019</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
-                    <div className="space-y-2">
-                      <FormLabel>Форма обучения</FormLabel>
-                      <Select defaultValue="full-time">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите форму обучения" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="full-time">Очная</SelectItem>
-                          <SelectItem value="part-time">Заочная</SelectItem>
-                          <SelectItem value="distance">Дистанционная</SelectItem>
-                          <SelectItem value="evening">Вечерняя</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 className="text-base font-medium">Предыдущее образование</h3>
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <FormLabel>Учебное заведение</FormLabel>
-                        <Input placeholder="Школа №1234" />
-                      </div>
-                      <div className="space-y-2">
-                        <FormLabel>Год окончания</FormLabel>
-                        <Select defaultValue="2023">
-                          <SelectTrigger>
-                            <SelectValue placeholder="Выберите год" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="2023">2023</SelectItem>
-                            <SelectItem value="2022">2022</SelectItem>
-                            <SelectItem value="2021">2021</SelectItem>
-                            <SelectItem value="2020">2020</SelectItem>
-                            <SelectItem value="2019">2019</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <FormLabel>Тип документа об образовании</FormLabel>
-                        <Select defaultValue="certificate">
-                          <SelectTrigger>
-                            <SelectValue placeholder="Выберите тип" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="certificate">Аттестат о среднем образовании</SelectItem>
-                            <SelectItem value="diploma">Диплом о среднем профессиональном образовании</SelectItem>
-                            <SelectItem value="bachelor">Диплом бакалавра</SelectItem>
-                            <SelectItem value="master">Диплом магистра</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <FormLabel>Номер документа</FormLabel>
-                        <Input placeholder="123456789" />
-                      </div>
-                    </div>
-                  </div>
                 </TabsContent>
 
                 <TabsContent value="additional" className="space-y-6 mt-0">
@@ -700,19 +623,19 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
                         "firstName",
                         "lastName",
                         "email",
-                        "studentId",
-                        "dateOfBirth",
+                        "iin",
+                        "birthDate",
                         "gender",
-                        "nationality",
+                        "citizenship",
                         "phoneNumber",
-                        "address",
+                        "adress",
                       ])
                       .then((isValid) => {
                         if (isValid) setActiveTab("education")
                       })
                   }
                   if (activeTab === "education") {
-                    form.trigger(["course", "group"]).then((isValid) => {
+                    form.trigger(["direction", "groupId"]).then((isValid) => {
                       if (isValid) setActiveTab("additional")
                     })
                   }
@@ -727,4 +650,3 @@ export function EditStudentModal({ student, isOpen, onClose, onSave }: EditStude
     </Dialog>
   )
 }
-

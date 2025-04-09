@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Edit, FileDown, Mail, Phone } from "lucide-react"
 import { Student } from "./student-table"
 import { HOST_NO_API } from "@/lib/constants"
+import { useEffect } from "react"
 
 interface ViewStudentModalProps {
   student: Student
@@ -18,6 +19,10 @@ interface ViewStudentModalProps {
 
 export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStudentModalProps) {
   if (!student) return null
+
+  useEffect(() => {
+    console.log("Student data:", student)
+  }, [])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -121,13 +126,17 @@ export function ViewStudentModal({ student, isOpen, onClose, onEdit }: ViewStude
                         <p className="text-sm font-medium">Телефон</p>
                         {/* <p className="text-sm text-muted-foreground">{student.phoneNumber || "+7 (999) 123-4567"}</p> */}
                       </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Группа</p>
+                        <p className="text-sm text-muted-foreground">{student.group?.name ?? "Без группы"}</p>
+                      </div>
                       <div className="space-y-1 md:col-span-2">
                         <p className="text-sm font-medium">Адрес</p>
                         <p className="text-sm text-muted-foreground">г. Москва, ул. Примерная, д. 123, кв. 45</p>
                       </div>
                       <div className="space-y-1 md:col-span-2">
                         <p className="text-sm font-medium">Экстренный контакт</p>
-                        <p className="text-sm text-muted-foreground">{student.firstName} {student.lastName} {student.middleName} (отец): +7 (999) 987-6543</p>
+                        <p className="text-sm text-muted-foreground">{student.emergencyContact}</p>
                       </div>
                     </div>
                   </TabsContent>

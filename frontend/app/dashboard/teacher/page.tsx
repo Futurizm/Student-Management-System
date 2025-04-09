@@ -69,7 +69,7 @@ export default function TeacherDashboardPage() {
                 </CardContent>
               </Card>
               <Card className="col-span-3">
-                <CardHeader>
+                <CardHeader>  
                   <CardTitle>Мои студенты</CardTitle>
                   <CardDescription>Студенты в ваших группах</CardDescription>
                 </CardHeader>

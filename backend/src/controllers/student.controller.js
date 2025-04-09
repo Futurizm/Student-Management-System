@@ -6,7 +6,7 @@ class StudentController {
     const {
       iin, lastName, firstName, middleName, birthDate, gender, citizenship, nationality,
       admissionDate, graduationDate, studyLanguage, specialty, qualification, identityDocument,
-      medicalCertificate, groupId, direction, phoneNumber, email, adress, notes
+      medicalCertificate, groupId, direction, phoneNumber, email, adress, notes, emergencyContact
     } = req.body;
 
     if (req.user.role !== 'ADMIN' && req.user.role !== 'TEACHER') {
@@ -45,7 +45,8 @@ class StudentController {
           phoneNumber,
           email,
           adress,
-          notes
+          notes,
+          emergencyContact
         },
       });
       res.status(201).json(student);
@@ -61,6 +62,9 @@ class StudentController {
       where,
       skip: (page - 1) * limit,
       take: Number(limit),
+      include: {
+        group: true
+      }
     });
     res.json(students);
   }
@@ -77,7 +81,7 @@ class StudentController {
     const {
       iin, lastName, firstName, middleName, birthDate, gender, citizenship, nationality,
       admissionDate, graduationDate, studyLanguage, specialty, qualification, identityDocument,
-      medicalCertificate, groupId, direction, phoneNumber, email, adress, notes
+      medicalCertificate, groupId, direction, phoneNumber, email, adress, notes, emergencyContact
     } = req.body;
 
     if (req.user.role !== 'ADMIN' && req.user.role !== 'TEACHER') {
@@ -117,6 +121,7 @@ class StudentController {
           email,
           adress,
           notes,
+          emergencyContact
         },
       });
       res.json(student);

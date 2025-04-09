@@ -54,7 +54,7 @@ class TeacherController {
   }
 
   async getTeachers(req, res) {
-    const teachers = await prisma.teacher.findMany({ include: { user: true, groups: true } });
+    const teachers = await prisma.teacher.findMany({ include: { user: true, groups: { include: { students: true } } } });
     const result = teachers.map(teacher => ({
       ...teacher,
       email: teacher.user.email,
